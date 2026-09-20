@@ -166,7 +166,8 @@
 ```
 
 - `Fuse.checkUpdate()` 改读该文件，比较逻辑不变；"访问网站"按钮改为打开 `url`。
-- 发布流程：改 pubspec 与 Fuse 版本，打 tag，GitHub Releases 上传 APK，更新 `remote/version.json`。
+- 发布流程：改 pubspec 与 Fuse 版本，打 tag，GitHub Releases 上传 APK，更新 `remote/version.json`。详见 `RELEASE.md`。
+- 应用内直接下载安装（2026-09-20 做过一版，用户决定暂缓）：代码在分支 `feature/in-app-update`，主线不含。
 - 若选择"暂不做更新检查"：删除 `Fuse` 的网络逻辑与设置页红点，保留版本展示。
 
 ### 5.3 校历配置
