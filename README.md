@@ -1,8 +1,12 @@
-# Litechron
+<p align="center">
+  <img src="assets/logo.svg" width="128" alt="Litechron">
+</p>
 
-服务于浙大学生的轻量时间管理器
+<h1 align="center">Litechron</h1>
 
-日程一览 · 课表查看 · DDL 助手 · 成绩查询
+<p align="center">服务于浙大学生的轻量时间管理器</p>
+
+<p align="center">日程一览 · 课表查看 · DDL 助手 · 成绩查询</p>
 
 ## 说明
 
