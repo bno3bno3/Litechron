@@ -168,10 +168,10 @@ class _HomePageState extends State<HomePage> {
                   },
                 ),
                 CupertinoDialogAction(
-                  child: const Text('访问网站'),
+                  child: const Text('前往下载'),
                   onPressed: () async {
                     await launchUrlString(
-                      'https://celechron.top',
+                      fuse.value.downloadUrl,
                       mode: LaunchMode.externalApplication,
                     );
                   },

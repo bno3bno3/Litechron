@@ -254,6 +254,8 @@ class OptionController extends GetxController {
 
   bool get hasNewVersion => _fuse.value.hasNewVersion;
 
+  String get downloadUrl => _fuse.value.downloadUrl;
+
   // —— 多账号 ——
   // 活动槽位 + 归档：当前账号数据在各 box 的原键位，非活跃账号归档在
   // <键>_<username> 下。切换的核心是一个不含 await 的同步交换块，

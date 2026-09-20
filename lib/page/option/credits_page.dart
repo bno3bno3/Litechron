@@ -1,61 +1,23 @@
-import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:celechron/design/persistent_headers.dart';
-import 'package:celechron/http/github_service.dart';
 
-class CreditsPage extends StatefulWidget {
+class CreditsPage extends StatelessWidget {
   final String version;
   const CreditsPage({required this.version, super.key});
 
-  @override
-  State<CreditsPage> createState() => _CreditsPageState();
-}
-
-class _CreditsPageState extends State<CreditsPage> {
-  List<String> _contributors = [];
-  bool _isLoading = true;
-  final _githubService = GitHubService();
-  final _httpClient = HttpClient();
-
-  @override
-  void initState() {
-    super.initState();
-    _loadContributors();
-  }
-
-  Future<void> _loadContributors() async {
-    try {
-      var result = await _githubService.getContributors(_httpClient);
-      // 无论是否有错误，都使用返回的 contributors 列表
-      // GitHubService 保证即使出错也会返回默认作者名单
-      setState(() {
-        _contributors = result.item2;
-        _isLoading = false;
-      });
-    } catch (e) {
-      // 如果 GitHubService 本身抛出异常
-      // 则使用 GitHubService 中的默认名单
-      setState(() {
-        _contributors = GitHubService.defaultContributors;
-        _isLoading = false;
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _httpClient.close();
-    super.dispose();
-  }
+  // 开发者名单（静态，不再请求 GitHub API）
+  static const List<String> _contributors = [
+    'nosig',
+    'iotang',
+    'cxz66666',
+    'Azuk 443',
+    'FoggyDawn',
+    'poormonitor',
+    'heddxh',
+    'ChenyuHeee',
+  ];
 
   Widget _buildContributorsList() {
-    if (_isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: CupertinoActivityIndicator(),
-      );
-    }
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
@@ -144,7 +106,7 @@ class _CreditsPageState extends State<CreditsPage> {
                             ),
                           ),
                           Text(
-                            '${widget.version} 版本',
+                            '$version 版本',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 12,
@@ -234,16 +196,7 @@ class _CreditsPageState extends State<CreditsPage> {
                             CupertinoColors.secondaryLabel, context)),
                   ),
                   const SizedBox(
-                    height: 4,
-                  ),
-                  Text(
-                    '浙ICP备2024061973号-2A',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: CupertinoDynamicColor.resolve(
-                          CupertinoColors.secondaryLabel, context),
-                    ),
+                    height: 16,
                   ),
                 ],
               ),

@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher_string.dart';
 import 'package:celechron/utils/utils.dart';
 import 'package:celechron/model/option.dart';
 import 'package:celechron/design/cupertino_async_switch.dart';
+import 'package:celechron/worker/fuse.dart';
 
 import 'allow_time_edit_page.dart';
 import 'account_manage_page.dart';
@@ -498,7 +499,9 @@ class OptionPage extends StatelessWidget {
                       ),
                       onTap: () async {
                         await launchUrlString(
-                          'https://celechron.top',
+                          _optionController.hasNewVersion
+                              ? _optionController.downloadUrl
+                              : Fuse.projectUrl,
                           mode: LaunchMode.externalApplication,
                         );
                       },

@@ -14,10 +14,23 @@ class Fuse {
   int? remoteBuild;
   bool hasNewVersion = false;
 
+  /// 版本信息文件，托管在本仓库 remote/ 目录，经 jsDelivr 分发
+  static const checkUpdateUrl =
+      'https://cdn.jsdelivr.net/gh/bno3bno3/Litechron@main/remote/version.json';
+
+  /// 项目主页，也是 version.json 缺少 url 字段时的下载页兜底
+  static const projectUrl = 'https://github.com/bno3bno3/Litechron';
+  static const releaseUrl = '$projectUrl/releases/latest';
+
+  /// 远程给出的下载页地址，未获取到时回退到 [releaseUrl]
+  String? remoteUrl;
+
   final HttpClient _httpClient = HttpClient();
   final DatabaseHelper _db = Get.find<DatabaseHelper>(tag: 'db');
 
   String get displayVersion => version.join('.') + (isBeta ? ' beta' : '');
+
+  String get downloadUrl => remoteUrl ?? releaseUrl;
 
   Fuse() {
     lastUpdateTime = DateTime(2001, 1, 1);
@@ -30,33 +43,24 @@ class Fuse {
         return null;
       }
 
-      late String checkUpdateUrl;
-      if (Platform.isAndroid) {
-        checkUpdateUrl =
-            "https://api.celechron.top/checkUpdate?platform=android";
-      } else if (Platform.isIOS) {
-        checkUpdateUrl = "https://api.celechron.top/checkUpdate?platform=ios";
-      } else {
-        checkUpdateUrl =
-            "https://api.celechron.top/checkUpdate?platform=others";
-      }
-
       var request = await _httpClient
           .getUrl(Uri.parse(checkUpdateUrl))
           .timeout(const Duration(seconds: 8));
       var response = await request.close().timeout(const Duration(seconds: 8));
-      var html = await response.transform(utf8.decoder).join();
+      if (response.statusCode != 200) {
+        return null;
+      }
+      var body = await response.transform(utf8.decoder).join();
+      var json = jsonDecode(body) as Map<String, dynamic>;
 
-      var match = RegExp('[0-9.]+').allMatches(html);
-      remoteVersion = match
-          .elementAt(0)
-          .group(0)!
+      remoteVersion = (json['version'] as String)
           .split('.')
           .map((e) => int.parse(e))
           .toList();
-      remoteBuild = int.parse(match.elementAt(1).group(0)!);
+      remoteBuild = json['build'] as int;
+      remoteUrl = json['url'] as String?;
 
-      hasNewVersion = _compareVersion(html.contains('beta'));
+      hasNewVersion = _compareVersion(json['beta'] == true);
       lastUpdateTime = DateTime.now();
       await _db.setFuse(this);
 
@@ -71,6 +75,9 @@ class Fuse {
 
   bool _compareVersion(bool remoteIsBeta) {
     if (remoteVersion == null || remoteBuild == null) {
+      return false;
+    }
+    if (remoteVersion!.length < 3) {
       return false;
     }
     if (remoteVersion![0] > version[0]) {
@@ -97,9 +104,11 @@ class Fuse {
 
   Map<String, dynamic> toJson() => {
         'lastUpdateTime': lastUpdateTime.toIso8601String(),
+        if (remoteUrl != null) 'remoteUrl': remoteUrl,
       };
 
   Fuse.fromJson(Map<String, dynamic> json) {
     lastUpdateTime = DateTime.parse(json['lastUpdateTime']);
+    remoteUrl = json['remoteUrl'] as String?;
   }
 }

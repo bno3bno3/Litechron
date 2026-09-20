@@ -174,7 +174,7 @@
 - 三级读取：远程 `remote/calendar/<学期>.json` → Hive 缓存 → 内置 `assets/calendar/<学期>.json`。
 - 初始数据：从原接口拉取现存学期文件（各入学年份对应学年的 `-1`、`-2`），内容是节次时间与假期的事实数据。
 - 每学期需要自己维护一份新文件，这是脱离后的固定成本。
-- 顺带把 `http://` 改为 `https://`。
+- 原接口不支持 https（探测返回连接失败），保持 `http://`。
 
 ### 5.4 签名
 
@@ -289,12 +289,12 @@ flutter_launcher_icons:
 - [x] 第 1 步：iOS / macOS 标识（静态替换，未能在本机构建）
 - [x] 第 1 步：Linux / Windows 元数据
 - [x] 第 1 步：Dart 侧 ID（App Group、Keychain、scheme、任务 ID、渠道）
-- [ ] 第 1 步：Android 真机并存验证
-- [ ] 第 2 步：版本检查改道或删除
-- [ ] 第 2 步：校历配置三级读取与初始数据
-- [ ] 第 2 步：贡献者静态名单
+- [ ] 第 1 步：Android 真机并存验证（暂无设备，已用 aapt 确认 APK 包名为 io.github.bno3bno3.litechron、label 为 Litechron）
+- [x] 第 2 步：版本检查改读 jsDelivr 上的 remote/version.json（2026-09-20）
+- [x] 第 2 步：校历配置原接口 → Hive → assets/calendar 兜底，内置 2022-2023-1 至 2026-2027-1 共 9 份（2026-09-20）
+- [x] 第 2 步：贡献者静态名单，删除 github_service.dart（2026-09-20）
 - [ ] 第 2 步：workmanager fork
-- [ ] 第 2 步：删除 ICP 与 celechron.top 链接
+- [x] 第 2 步：删除 ICP 与 celechron.top 链接（2026-09-20）
 - [ ] 第 3 步：文案与显示名
 - [ ] 第 3 步：关于页署名
 - [ ] 第 3 步：类名与方法名
