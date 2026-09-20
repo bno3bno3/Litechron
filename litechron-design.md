@@ -303,8 +303,8 @@ flutter_launcher_icons:
 - [x] 第 3 步：类名与方法名（2026-09-20）
 - [x] 第 3 步：Logo 选定 F 霜彩环（近白底、靛蓝→青渐变环、深灰指针、琥珀圆心），图标已生成（2026-09-20）
 - [x] 第 3 步：README、CLAUDE.md、AGENTS.md（2026-09-20）
-- [ ] 第 4 步：版本重置与校验测试
-- [ ] 第 4 步：release 签名与构建
+- [x] 第 4 步：版本重置为 1.0.0+1，test/fuse_version_test.dart 校验 Fuse 与 pubspec 一致（2026-09-20）
+- [x] 第 4 步：release 签名（android/litechron-release.jks + key.properties，均不进仓库）与构建（2026-09-20）
 - [ ] 第 4 步：v1.0.0 标签、Release、version.json
 - [ ] 第 5 步（可选）：Dart 包名与 Pigeon 重新生成
 - [ ] 清理 temp/ 与 rubbish.md，归档本文档
