@@ -12,7 +12,7 @@
 	<true/>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)group.top.celechron.celechron.debug</string>
+		<string>$(AppIdentifierPrefix)group.io.github.bno3bno3.litechron.debug</string>
 	</array>
 </dict>
 </plist>

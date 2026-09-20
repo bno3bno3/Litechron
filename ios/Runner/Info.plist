@@ -4,14 +4,14 @@
 <dict>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>top.celechron.celechron.backgroundScholarFetch</string>
+		<string>io.github.bno3bno3.litechron.backgroundScholarFetch</string>
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Celechron</string>
+	<string>Litechron</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -19,7 +19,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>celechron</string>
+	<string>litechron</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -32,10 +32,10 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>top.celechron.celechron</string>
+			<string>io.github.bno3bno3.litechron</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>celechron</string>
+				<string>litechron</string>
 			</array>
 		</dict>
 	</array>
@@ -46,11 +46,11 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Celechron需要完整访问您的日历来同步课程表信息</string>
+	<string>Litechron需要完整访问您的日历来同步课程表信息</string>
 	<key>NSCalendarsUsageDescription</key>
-	<string>Celechron需要访问您的日历来同步课程表信息</string>
+	<string>Litechron需要访问您的日历来同步课程表信息</string>
 	<key>NSContactsUsageDescription</key>
-	<string>Celechron需要访问通讯录来设置事件参与者</string>
+	<string>Litechron需要访问通讯录来设置事件参与者</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

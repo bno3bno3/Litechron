@@ -51,13 +51,13 @@ class DatabaseHelper {
     var secureStorageItems = await secureStorage.readAll(
         iOptions: const IOSOptions(
             accessibility: KeychainAccessibility.first_unlock,
-            accountName: 'Celechron'));
+            accountName: 'Litechron'));
     await Future.forEach(secureStorageItems.entries, (e) async {
       await secureStorage.delete(
           key: e.key,
           iOptions: const IOSOptions(
               accessibility: KeychainAccessibility.first_unlock,
-              accountName: 'Celechron'));
+              accountName: 'Litechron'));
       await secureStorage.write(
           key: e.key, value: e.value, iOptions: secureStorageIOSOptions);
     });

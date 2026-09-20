@@ -1,4 +1,4 @@
-package xyz.nosig.celechron
+package io.github.bno3bno3.litechron
 
 import android.os.Bundle
 import androidx.glance.appwidget.updateAll
@@ -17,7 +17,7 @@ class MainActivity: FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "top.celechron.celechron/ecardWidget").setMethodCallHandler {
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "io.github.bno3bno3.litechron/ecardWidget").setMethodCallHandler {
                 call, result ->
             CoroutineScope(Dispatchers.Main).launch {
                 ECardWidget().updateAll(this@MainActivity)

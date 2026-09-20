@@ -75,9 +75,9 @@ struct FlowWidgetProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<FlowEntry>) -> Void) {
         // 读取UserDefaults中的flowList项
         #if DEBUG
-        let userDefaults = UserDefaults(suiteName: "group.top.celechron.celechron.debug")
+        let userDefaults = UserDefaults(suiteName: "group.io.github.bno3bno3.litechron.debug")
         #else
-        let userDefaults = UserDefaults(suiteName: "group.top.celechron.celechron")
+        let userDefaults = UserDefaults(suiteName: "group.io.github.bno3bno3.litechron")
         #endif
         let data = userDefaults?.data(forKey: "flowList") ?? Data()
         let flowList = try? JSONDecoder().decode([PeriodDto?].self, from: data)

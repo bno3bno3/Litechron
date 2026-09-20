@@ -892,3 +892,5 @@ DerivedData/
 # claude AI
 .claude/
 rubbish.md
+# Claude 中间文件
+/temp/

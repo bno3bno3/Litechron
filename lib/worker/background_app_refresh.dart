@@ -11,7 +11,7 @@ import '../utils/utils.dart';
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     switch (task) {
-      case 'top.celechron.celechron.backgroundScholarFetch':
+      case 'io.github.bno3bno3.litechron.backgroundScholarFetch':
         await refreshScholar();
         break;
       default:
@@ -39,7 +39,7 @@ Future<void> refreshScholar() async {
   // 成绩变动通知 channel
   const gradeNotificationDetails = NotificationDetails(
     android: AndroidNotificationDetails(
-      'top.celechron.celechron.gradeChange',
+      'io.github.bno3bno3.litechron.gradeChange',
       '成绩变动提醒',
       importance: Importance.max,
       priority: Priority.high,
@@ -58,7 +58,7 @@ Future<void> refreshScholar() async {
   // DDL 截止提醒 channel
   const ddlNotificationDetails = NotificationDetails(
     android: AndroidNotificationDetails(
-      'top.celechron.celechron.ddlReminder',
+      'io.github.bno3bno3.litechron.ddlReminder',
       '作业截止提醒',
       importance: Importance.max,
       priority: Priority.high,

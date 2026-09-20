@@ -8,9 +8,9 @@ extension FlutterError: Error {}
 private class FlowMessengerImplementation: FlowMessenger {
     func transfer(data: FlowMessage, completion: @escaping (Result<Bool, Error>) -> Void) {
 #if DEBUG
-        let userDefaults = UserDefaults(suiteName: "group.top.celechron.celechron.debug")
+        let userDefaults = UserDefaults(suiteName: "group.io.github.bno3bno3.litechron.debug")
 #else
-        let userDefaults = UserDefaults(suiteName: "group.top.celechron.celechron")
+        let userDefaults = UserDefaults(suiteName: "group.io.github.bno3bno3.litechron")
 #endif
         userDefaults?.set(try? JSONEncoder().encode(data.flowListDto), forKey: "flowList")
         if #available(iOS 14.0, *) {
@@ -27,7 +27,7 @@ private class FlowMessengerImplementation: FlowMessenger {
     ) -> Bool {
 
         // Background AppRefresh MethodChannel
-        WorkmanagerPlugin.registerPeriodicTask(withIdentifier: "top.celechron.celechron.backgroundScholarFetch", frequency: NSNumber(value: 15 * 60))
+        WorkmanagerPlugin.registerPeriodicTask(withIdentifier: "io.github.bno3bno3.litechron.backgroundScholarFetch", frequency: NSNumber(value: 15 * 60))
         WorkmanagerPlugin.setPluginRegistrantCallback { registry in
             GeneratedPluginRegistrant.register(with: registry)
         }
@@ -48,7 +48,7 @@ private class FlowMessengerImplementation: FlowMessenger {
         FlowMessengerSetup.setUp(binaryMessenger: engineBridge.applicationRegistrar.messenger(), api: FlowMessengerImplementation())
 
         // ECard widget MethodChannel
-        let ecardWidgetChannel = FlutterMethodChannel(name: "top.celechron.celechron/ecardWidget", binaryMessenger: engineBridge.applicationRegistrar.messenger())
+        let ecardWidgetChannel = FlutterMethodChannel(name: "io.github.bno3bno3.litechron/ecardWidget", binaryMessenger: engineBridge.applicationRegistrar.messenger())
         ecardWidgetChannel.setMethodCallHandler({
           (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
             if #available(iOS 14.0, *) {

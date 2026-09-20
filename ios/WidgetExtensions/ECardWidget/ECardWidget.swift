@@ -24,16 +24,16 @@ struct ECardWidgetProvider: TimelineProvider {
     
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
     #if DEBUG
-        let accessGroup = "group.top.celechron.celechron.debug"
+        let accessGroup = "group.io.github.bno3bno3.litechron.debug"
     #else
-        let accessGroup = "group.top.celechron.celechron"
+        let accessGroup = "group.io.github.bno3bno3.litechron"
     #endif
         let keychainQuery: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlock,
             kSecAttrAccount: "synjonesAuth",
             kSecAttrAccessGroup: accessGroup,
-            kSecAttrService: "Celechron",
+            kSecAttrService: "Litechron",
             kSecAttrSynchronizable: false,
             kSecReturnData: true,
         ]
@@ -149,7 +149,7 @@ struct ECardWidgetView: View {
                 Spacer()
                 Image(systemName: "qrcode").foregroundColor(/*@START_MENU_TOKEN@*/.blue/*@END_MENU_TOKEN@*/).font(/*@START_MENU_TOKEN@*/.title/*@END_MENU_TOKEN@*/)
             }
-        }.widgetURL(URL(string: "celechron://ecardpaypage"))
+        }.widgetURL(URL(string: "litechron://ecardpaypage"))
     }
 }
 

@@ -53,14 +53,14 @@ class OptionController extends GetxController {
         Workmanager()
             .initialize(callbackDispatcher)
             .then((value) => Workmanager().registerPeriodicTask(
-                  'top.celechron.celechron.backgroundScholarFetch',
-                  'top.celechron.celechron.backgroundScholarFetch',
+                  'io.github.bno3bno3.litechron.backgroundScholarFetch',
+                  'io.github.bno3bno3.litechron.backgroundScholarFetch',
                   initialDelay: const Duration(seconds: 10),
                   frequency: const Duration(minutes: 15),
                 ));
       } else {
         Workmanager().cancelByUniqueName(
-            'top.celechron.celechron.backgroundScholarFetch');
+            'io.github.bno3bno3.litechron.backgroundScholarFetch');
       }
     }
 
@@ -139,7 +139,7 @@ class OptionController extends GetxController {
 
   void _updateBackgroundWorker(bool enabled) {
     Workmanager()
-        .cancelByUniqueName('top.celechron.celechron.backgroundScholarFetch')
+        .cancelByUniqueName('io.github.bno3bno3.litechron.backgroundScholarFetch')
         .then((value) {
       if (Platform.isIOS) return Workmanager().printScheduledTasks();
     });
@@ -160,8 +160,8 @@ class OptionController extends GetxController {
       Workmanager()
           .initialize(callbackDispatcher)
           .then((value) => Workmanager().registerPeriodicTask(
-                'top.celechron.celechron.backgroundScholarFetch',
-                'top.celechron.celechron.backgroundScholarFetch',
+                'io.github.bno3bno3.litechron.backgroundScholarFetch',
+                'io.github.bno3bno3.litechron.backgroundScholarFetch',
                 frequency: const Duration(minutes: 15),
                 constraints: Constraints(
                   networkType: NetworkType.connected,

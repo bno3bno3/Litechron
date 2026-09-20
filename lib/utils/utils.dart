@@ -27,9 +27,9 @@ String toStringHumanReadable(DateTime dateTime) {
 const secureStorageIOSOptions = kDebugMode
     ? IOSOptions(
         accessibility: KeychainAccessibility.first_unlock,
-        accountName: 'Celechron',
-        groupId: 'group.top.celechron.celechron.debug')
+        accountName: 'Litechron',
+        groupId: 'group.io.github.bno3bno3.litechron.debug')
     : IOSOptions(
         accessibility: KeychainAccessibility.first_unlock,
-        accountName: 'Celechron',
-        groupId: 'group.top.celechron.celechron');
+        accountName: 'Litechron',
+        groupId: 'group.io.github.bno3bno3.litechron');

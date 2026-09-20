@@ -25,7 +25,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace 'xyz.nosig.celechron'
+    namespace 'io.github.bno3bno3.litechron'
     compileSdkVersion flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
 
@@ -45,7 +45,7 @@ android {
 
     defaultConfig {
         multiDexEnabled true
-        applicationId "xyz.nosig.celechron"
+        applicationId "io.github.bno3bno3.litechron"
         minSdkVersion 28
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()

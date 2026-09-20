@@ -5,10 +5,10 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = celechron
+PRODUCT_NAME = litechron
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = xyz.nosig.celechron
+PRODUCT_BUNDLE_IDENTIFIER = io.github.bno3bno3.litechron
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2024 Celechron. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 Litechron. Licensed under GPLv3.

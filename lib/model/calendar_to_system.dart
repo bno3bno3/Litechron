@@ -27,8 +27,8 @@ import 'package:celechron/model/semester.dart';
 /// - 提供同步状态和统计信息
 
 class CalendarToSystemManager {
-  static const String celechronCalendarName = 'Celechron课表';
-  static const String calendarDescription = '由Celechron自动同步的浙大课程表';
+  static const String celechronCalendarName = 'Litechron课表';
+  static const String calendarDescription = '由Litechron自动同步的浙大课程表';
 
   final DeviceCalendarPlugin _deviceCalendarPlugin = DeviceCalendarPlugin();
 

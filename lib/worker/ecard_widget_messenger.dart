@@ -30,7 +30,7 @@ class ECardWidgetMessenger {
           iOptions: secureStorageIOSOptions);
 
       if (Platform.isIOS || Platform.isAndroid) {
-        const platform = MethodChannel('top.celechron.celechron/ecardWidget');
+        const platform = MethodChannel('io.github.bno3bno3.litechron/ecardWidget');
         await platform.invokeMethod('update');
       }
     }
@@ -56,7 +56,7 @@ class ECardWidgetMessenger {
           iOptions: secureStorageIOSOptions);
 
       if (PlatformFeatures.hasWidgetSupport) {
-        const platform = MethodChannel('top.celechron.celechron/ecardWidget');
+        const platform = MethodChannel('io.github.bno3bno3.litechron/ecardWidget');
         await platform.invokeMethod('update');
       }
     } catch (e) {
@@ -70,7 +70,7 @@ class ECardWidgetMessenger {
         key: 'synjonesAuth', iOptions: secureStorageIOSOptions);
 
     if (PlatformFeatures.hasWidgetSupport) {
-      const platform = MethodChannel('top.celechron.celechron/ecardWidget');
+      const platform = MethodChannel('io.github.bno3bno3.litechron/ecardWidget');
       await platform.invokeMethod('logout');
     }
   }

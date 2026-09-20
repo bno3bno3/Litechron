@@ -116,8 +116,8 @@ class _CelechronAppState extends State<CelechronApp>
             data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
             child: child!,
           ),
-          title: 'Celechron',
-          home: const HomePage(title: 'Celechron'),
+          title: 'Litechron',
+          home: const HomePage(title: 'Litechron'),
           initialRoute: '/',
           routes: {
             '/ecardpaypage': (context) => ECardPayPage(),
@@ -130,7 +130,7 @@ class _CelechronAppState extends State<CelechronApp>
   void _initAppLinks() {
     final appLinks = AppLinks();
     appLinks.uriLinkStream.listen((uri) {
-      if (uri.toString() == 'celechron://ecardpaypage') {
+      if (uri.toString() == 'litechron://ecardpaypage') {
         navigator?.popUntil((route) =>
             !(route.settings.name?.endsWith('ecardpaypage') ?? false));
         navigator?.pushNamed('/ecardpaypage');
@@ -188,8 +188,8 @@ class _CelechronAppState extends State<CelechronApp>
       requestAlertPermission: true,
     );
     // const initializationSettingsWindows = WindowsInitializationSettings(
-    //     appName: 'Celechron',
-    //     appUserModelId: 'top.celechron.app',
+    //     appName: 'Litechron',
+    //     appUserModelId: 'io.github.bno3bno3.litechron',
     //     guid: '7c85e25b-fa7d-489e-9b10-b4c22a3458f0');
     const initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,

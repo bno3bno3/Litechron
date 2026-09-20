@@ -1,4 +1,4 @@
-package xyz.nosig.celechron
+package io.github.bno3bno3.litechron
 
 import android.content.Context
 import android.content.Intent
@@ -58,7 +58,7 @@ class ECardWidget : GlanceAppWidget() {
     private fun content(context: Context?, id: GlanceId?, balance: Int) {
         Column(
             modifier = GlanceModifier.background(GlanceTheme.colors.background).fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp).cornerRadius(16.dp).clickable{
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("celechron://ecardpaypage"))
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("litechron://ecardpaypage"))
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context?.startActivity(intent)
             },
