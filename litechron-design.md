@@ -1,6 +1,6 @@
 # Litechron 设计与脱离方案
 
-> 状态：第 1–5 步已执行（2026-09-20）。剩余：workmanager fork 指向、真机并存验证、GitHub Release 上传。
+> 状态：第 1–5 步已执行（2026-09-20）。剩余：真机并存验证、GitHub Release 上传。
 > 本文档是改名期间的唯一方案来源，各步骤完成后在文末"待办清单"勾选；全部完成后可归档。
 
 ## 1. 目标与原则
@@ -296,7 +296,7 @@ flutter_launcher_icons:
 - [x] 第 2 步：版本检查改读 jsDelivr 上的 remote/version.json（2026-09-20）
 - [x] 第 2 步：校历配置原接口 → Hive → assets/calendar 兜底，内置 2022-2023-1 至 2026-2027-1 共 9 份（2026-09-20）
 - [x] 第 2 步：贡献者静态名单，删除 github_service.dart（2026-09-20）
-- [ ] 第 2 步：workmanager fork（等用户在 GitHub 网页 Fork 后改 pubspec 指向并固定 commit）
+- [x] 第 2 步：workmanager 指向 bno3bno3/Litechron-flutter_workmanager，固定 commit d7e6ba5（2026-09-20）
 - [x] 第 2 步：删除 ICP 与 celechron.top 链接（2026-09-20）
 - [x] 第 3 步：文案与显示名（2026-09-20）
 - [x] 第 3 步：关于页署名，改用 assets/logo.svg（2026-09-20）

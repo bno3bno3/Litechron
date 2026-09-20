@@ -25,8 +25,8 @@ dependencies:
   quiver: ^3.2.1
   workmanager:
     git:
-      url: https://github.com/Celechron/flutter_workmanager.git
-      ref: main
+      url: https://github.com/bno3bno3/Litechron-flutter_workmanager.git
+      ref: d7e6ba5ef3796fafe54d9739e481f01058751b4d
       path: workmanager
   flutter_local_notifications: ^17.2.4
   flutter_secure_storage: ^9.2.4

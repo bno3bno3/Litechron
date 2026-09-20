@@ -16,7 +16,7 @@ The app is stateful and data-heavy. Most features depend on persisted Hive data,
 - State and dependency lookup: GetX (`Get.put`, `Get.find`, `Rx`, `Obx`, controller lifecycle).
 - Local persistence: Hive plus custom adapters in `lib/database/adapters/`.
 - Credential and background-task flags: `flutter_secure_storage`.
-- Background refresh: `workmanager` from a custom Git fork (originally by Celechron) referenced in `pubspec.yaml`.
+- Background refresh: `workmanager` from `bno3bno3/Litechron-flutter_workmanager` (a fork of Celechron's fork) pinned to a commit in `pubspec.yaml`.
 - Notifications: `flutter_local_notifications`.
 - Native bridge/widget data transfer: Pigeon files under `lib/pigeon/`, plus iOS/Android platform code.
 
