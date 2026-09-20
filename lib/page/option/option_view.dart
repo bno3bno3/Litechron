@@ -76,7 +76,7 @@ class OptionPage extends StatelessWidget {
                         ? Padding(
                             padding: const EdgeInsets.only(left: 16),
                             child: Text(
-                                'Celechron 将不定期自动运行以刷新数据。请开启通知权限，且不要将 Celechron 从后台中移除。',
+                                'Litechron 将不定期自动运行以刷新数据。请开启通知权限，且不要将 Litechron 从后台中移除。',
                                 style: headerFooterTextStyle))
                         : null,
                     children: <CupertinoListTile>[
@@ -453,9 +453,9 @@ class OptionPage extends StatelessWidget {
                       child: Text('关于', style: headerFooterTextStyle)),
                   children: <CupertinoListTile>[
                     CupertinoListTile(
-                      title: const Text('关于 Celechron'),
+                      title: const Text('关于 Litechron'),
                       trailing: BackChervonRow(
-                        child: Text(_optionController.celechronVersion,
+                        child: Text(_optionController.appVersion,
                             style: trailingTextStyle),
                       ),
                       onTap: () async {
@@ -463,7 +463,7 @@ class OptionPage extends StatelessWidget {
                             CupertinoPageRoute(
                                 builder: (context) => CreditsPage(
                                     version:
-                                        _optionController.celechronVersion)));
+                                        _optionController.appVersion)));
                       },
                     ),
                     CupertinoListTile(

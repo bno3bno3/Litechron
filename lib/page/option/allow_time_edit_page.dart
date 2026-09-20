@@ -276,7 +276,7 @@ class _AllowTimeEditPageState extends State<AllowTimeEditPage> {
       child: SafeArea(
         child: CustomScrollView(
           slivers: [
-            const CelechronSliverTextHeader(subtitle: '编辑可用工作时段'),
+            const LitechronSliverTextHeader(subtitle: '编辑可用工作时段'),
             SliverList(
               delegate: SliverChildListDelegate([
                 CupertinoListSection.insetGrouped(

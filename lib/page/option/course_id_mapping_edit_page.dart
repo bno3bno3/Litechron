@@ -178,7 +178,7 @@ class CourseIdMappingEditPage extends StatelessWidget {
       child: SafeArea(
         child: CustomScrollView(
           slivers: [
-            const CelechronSliverTextHeader(subtitle: '自定义课程代码映射'),
+            const LitechronSliverTextHeader(subtitle: '自定义课程代码映射'),
             Obx(() => SliverList(
                   delegate: SliverChildBuilderDelegate(
                       (context, index) => Container(

@@ -9,11 +9,11 @@ import 'package:celechron/model/period.dart';
 import 'package:celechron/model/semester.dart';
 
 /// 系统日历同步管理器
-/// 负责创建和管理Celechron课表在系统日历中的同步
+/// 负责创建和管理Litechron课表在系统日历中的同步
 ///
 /// 主要功能:
 /// - 日历权限管理: [requestPermissions], [hasCalendarPermission]
-/// - 日历创建与管理: [getOrCreateCelechronCalendar], [deleteCelechronCalendar]
+/// - 日历创建与管理: [getOrCreateLitechronCalendar], [deleteLitechronCalendar]
 /// - 课程同步: [syncScholarToSystemCalendar], [resyncCalendarEvents]
 /// - 学期管理: [syncSpecificSemester], [syncAllSemesters], [getAvailableSemesters]
 /// - 同步状态: [calendarSyncEnabled], [checkInitialCalendarSyncStatus], [toggleCalendarSync]
@@ -39,7 +39,7 @@ class CalendarToSystemManager {
   int _syncedCourseCount = 0; // 同步的课程数量
   int _syncedEventCount = 0; // 同步的日程数量
 
-  // Celechron课表日历的ID
+  // Litechron课表日历的ID
   String? _celechronCalendarId;
 
   // 持有 Rx 本体而非 Scholar 对象，账号切换后自动指向新账号
@@ -101,8 +101,8 @@ class CalendarToSystemManager {
     }
   }
 
-  /// 获取或创建Celechron专用日历
-  Future<String?> getOrCreateCelechronCalendar() async {
+  /// 获取或创建Litechron专用日历
+  Future<String?> getOrCreateLitechronCalendar() async {
     try {
       // 如果已有缓存的日历ID，先验证是否仍然存在
       if (_celechronCalendarId != null) {
@@ -128,7 +128,7 @@ class CalendarToSystemManager {
         }
       }
 
-      // 创建新的Celechron日历
+      // 创建新的Litechron日历
       var createResult =
           await _deviceCalendarPlugin.createCalendar(celechronCalendarName);
       if (createResult.isSuccess && createResult.data != null) {
@@ -155,8 +155,8 @@ class CalendarToSystemManager {
         return false;
       }
 
-      // 获取或创建Celechron日历
-      var calendarId = await getOrCreateCelechronCalendar();
+      // 获取或创建Litechron日历
+      var calendarId = await getOrCreateLitechronCalendar();
       if (calendarId == null) {
         return false;
       }
@@ -323,9 +323,9 @@ class CalendarToSystemManager {
         .firstWhereOrNull((s) => s.name == semesterName);
   }
 
-  /// 删除整个Celechron日历
-  /// 这将完全删除Celechron日历及其所有事件
-  Future<bool> deleteCelechronCalendar() async {
+  /// 删除整个Litechron日历
+  /// 这将完全删除Litechron日历及其所有事件
+  Future<bool> deleteLitechronCalendar() async {
     try {
       // 如果没有缓存的日历ID，先尝试查找
       if (_celechronCalendarId == null) {
@@ -593,7 +593,7 @@ class CalendarToSystemManager {
             .firstWhereOrNull((cal) => cal.name == celechronCalendarName);
 
         if (existingCalendar != null) {
-          // 如果找到了Celechron日历，说明之前可能开启过同步
+          // 如果找到了Litechron日历，说明之前可能开启过同步
           // 但为了保险起见，我们检查日历中是否有事件
           var eventsResult = await _deviceCalendarPlugin.retrieveEvents(
             existingCalendar.id!,
@@ -656,11 +656,11 @@ class CalendarToSystemManager {
       // 关闭同步功能
       _calendarSyncEnabled.value = false;
 
-      // 删除课表数据和Celechron日历
+      // 删除课表数据和Litechron日历
       try {
-        bool deleteSuccess = await deleteCelechronCalendar();
+        bool deleteSuccess = await deleteLitechronCalendar();
         if (deleteSuccess) {
-          _showAlert(context, '成功', '日历同步功能已关闭，已删除课表数据和Celechron日历');
+          _showAlert(context, '成功', '日历同步功能已关闭，已删除课表数据和Litechron日历');
         } else {
           _showAlert(context, '成功', '日历同步功能已关闭，但删除日历时遇到问题');
         }

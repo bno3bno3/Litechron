@@ -58,7 +58,7 @@ class ECardPayPage extends StatelessWidget {
       child: SafeArea(
         child: CustomScrollView(
           slivers: [
-            const CelechronSliverTextHeader(subtitle: '付款码'),
+            const LitechronSliverTextHeader(subtitle: '付款码'),
             SliverFillRemaining(
                 child: Column(
               children: [

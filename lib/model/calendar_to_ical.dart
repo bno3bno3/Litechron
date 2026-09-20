@@ -118,7 +118,7 @@ class CalendarToIcal {
     buffer.writeln('BEGIN:VCALENDAR');
     buffer.writeln('X-WR-CALNAME:$calendarName');
     buffer.writeln('X-APPLE-CALENDAR-COLOR:#2BBFF0');
-    buffer.writeln('PRODID:-//Celechron//Course Calendar 1.0//CN');
+    buffer.writeln('PRODID:-//Litechron//Course Calendar 1.0//CN');
     buffer.writeln('VERSION:2.0');
     buffer.writeln('METHOD:PUBLISH');
 
@@ -255,7 +255,7 @@ class CalendarToIcal {
       // 获取应用文档目录
       final directory = await getApplicationDocumentsDirectory();
       final fileName =
-          'celechron_schedule_${DateTime.now().millisecondsSinceEpoch}.ics';
+          'litechron_schedule_${DateTime.now().millisecondsSinceEpoch}.ics';
       final tempFile = File('${directory.path}/$fileName');
 
       // 写入临时文件
@@ -266,7 +266,7 @@ class CalendarToIcal {
         ShareParams(
           files: [XFile(tempFile.path)],
           subject: '浙大课程表',
-          text: '从 Celechron 导出的课程表文件，可导入到其他日历应用中使用。',
+          text: '从 Litechron 导出的课程表文件，可导入到其他日历应用中使用。',
           sharePositionOrigin: sharePositionOrigin,
         ),
       );
@@ -296,7 +296,7 @@ class CalendarToIcal {
 
       final directory = await getApplicationDocumentsDirectory();
       final fileName =
-          'celechron_${semesterName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.ics';
+          'litechron_${semesterName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}.ics';
       final tempFile = File('${directory.path}/$fileName');
 
       await tempFile.writeAsString(icalContent);
@@ -305,7 +305,7 @@ class CalendarToIcal {
         ShareParams(
           files: [XFile(tempFile.path)],
           subject: '浙大课程表-$semesterName',
-          text: '从 Celechron 导出的 $semesterName 课程表文件。',
+          text: '从 Litechron 导出的 $semesterName 课程表文件。',
           sharePositionOrigin: sharePositionOrigin,
         ),
       );
@@ -334,7 +334,7 @@ class CalendarToIcal {
 
       final directory = await getApplicationDocumentsDirectory();
       final fileName =
-          'celechron_all_semesters_${DateTime.now().millisecondsSinceEpoch}.ics';
+          'litechron_all_semesters_${DateTime.now().millisecondsSinceEpoch}.ics';
       final tempFile = File('${directory.path}/$fileName');
 
       await tempFile.writeAsString(icalContent);
@@ -343,7 +343,7 @@ class CalendarToIcal {
         ShareParams(
           files: [XFile(tempFile.path)],
           subject: '浙大课程表-完整版',
-          text: '从 Celechron 导出的完整课程表文件，包含所有学期。',
+          text: '从 Litechron 导出的完整课程表文件，包含所有学期。',
           sharePositionOrigin: sharePositionOrigin,
         ),
       );

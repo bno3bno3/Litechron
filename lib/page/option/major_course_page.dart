@@ -206,7 +206,7 @@ class _MajorCoursePageState extends State<MajorCoursePage> {
           CupertinoColors.systemGroupedBackground, context),
       child: CustomScrollView(
         slivers: [
-          CelechronSliverTextHeader(
+          LitechronSliverTextHeader(
             subtitle: '主修课程',
             right: Padding(
               padding: const EdgeInsets.only(right: 18),

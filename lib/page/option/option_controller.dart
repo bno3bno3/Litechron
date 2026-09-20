@@ -250,7 +250,7 @@ class OptionController extends GetxController {
     recommendGpaRule.value = _db.getRecommendGpaRule();
   }
 
-  String get celechronVersion => _fuse.value.displayVersion;
+  String get appVersion => _fuse.value.displayVersion;
 
   bool get hasNewVersion => _fuse.value.hasNewVersion;
 

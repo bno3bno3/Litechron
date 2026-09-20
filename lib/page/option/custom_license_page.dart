@@ -11,7 +11,7 @@ class CustomLicensePage extends StatelessWidget {
       child: SafeArea(
         child: CustomScrollView(
           slivers: [
-            const CelechronSliverTextHeader(subtitle: '服务条款'),
+            const LitechronSliverTextHeader(subtitle: '服务条款'),
             SliverPadding(
               padding: const EdgeInsets.only(left: 24, right: 24),
               sliver: SliverList(

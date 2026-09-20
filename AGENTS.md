@@ -4,7 +4,7 @@ This file gives Claude Code the project context needed to work safely in this re
 
 ## Project Overview
 
-Celechron is a Flutter/Dart cross-platform app for Zhejiang University students. It combines schedule viewing, course and exam data, task/DDL management, GPA and grade display, homework reminders from Learning in ZJU, calendar export/sync, and platform widgets/live activities.
+Litechron is a Flutter/Dart cross-platform app for Zhejiang University students, forked from Celechron and rebranded so it can be installed alongside the official app. It combines schedule viewing, course and exam data, task/DDL management, GPA and grade display, homework reminders from Learning in ZJU, calendar export/sync, and platform widgets/live activities.
 
 The app is stateful and data-heavy. Most features depend on persisted Hive data, secure credentials, GetX global state, and network scraping of ZJU services. Prefer small, behavior-preserving changes unless the requested task explicitly calls for a broader refactor.
 
@@ -16,7 +16,7 @@ The app is stateful and data-heavy. Most features depend on persisted Hive data,
 - State and dependency lookup: GetX (`Get.put`, `Get.find`, `Rx`, `Obx`, controller lifecycle).
 - Local persistence: Hive plus custom adapters in `lib/database/adapters/`.
 - Credential and background-task flags: `flutter_secure_storage`.
-- Background refresh: `workmanager` from the custom Celechron Git dependency in `pubspec.yaml`.
+- Background refresh: `workmanager` from a custom Git fork (originally by Celechron) referenced in `pubspec.yaml`.
 - Notifications: `flutter_local_notifications`.
 - Native bridge/widget data transfer: Pigeon files under `lib/pigeon/`, plus iOS/Android platform code.
 
@@ -57,7 +57,7 @@ There is no obvious dedicated test directory in the current tree, so use `flutte
    - `flowListLastUpdate`: `Rx<DateTime>`
    - `option`: `Option`
    - `fuse`: `Rx<Fuse>`
-3. `CelechronApp` builds a `GetCupertinoApp` with Chinese locale, root `HomePage`, and `/ecardpaypage`.
+3. `LitechronApp` builds a `GetCupertinoApp` with Chinese locale, root `HomePage`, and `/ecardpaypage`.
 4. If a saved `Scholar` is logged in, startup shows cached data first, then asynchronously logs in and refreshes remote academic data.
 5. `HomePage` hosts five main tabs: Flow, Calendar, Task, Scholar, and Option. Search is kept as a cached extra page.
 
@@ -108,7 +108,7 @@ The ZJU scraping layer is brittle by nature. Preserve current behavior unless a 
 ## Scheduling and Calendar Rules
 
 - `Task` has three types: real DDL (`deadline`), fixed schedule (`fixed`), and historical fixed schedule (`fixedlegacy`).
-- `Period` has five types: class, exam/test, user schedule, virtual free slot, and Celechron-generated flow block.
+- `Period` has five types: class, exam/test, user schedule, virtual free slot, and Litechron-generated flow block.
 - `FlowController.generateNewFlowList()` uses task deadlines, user allowed work times, blocking fixed schedules, and academic periods to produce flow blocks.
 - `FlowController.walkFlowList()` is responsible for pruning expired periods, syncing DDL descriptions, adding upcoming classes/fixed schedules, and saving only meaningful changes.
 - `Semester.periods` is cached. Any mutation that changes sessions, exams, grades, calendar config, or derived course state must invalidate that cache.
@@ -135,6 +135,15 @@ Treat these as generated or high-risk unless the task explicitly targets them:
 - Hive adapters, unless updating persistence intentionally
 
 If Pigeon interfaces change, regenerate the corresponding Dart/native outputs and verify both Flutter and native sides.
+
+## Brand and Identifiers
+
+- App name is **Litechron**. The Dart package name is still `celechron` (imports use `package:celechron/`); do not treat that as a user-visible name.
+- Application ID / bundle ID / App Group base is `io.github.bno3bno3.litechron`. URL scheme is `litechron`. Keychain service name is `Litechron`. System calendar name is `Litechron课表`. These differ from official Celechron on purpose so both apps coexist; never revert them.
+- Do not reintroduce upstream endpoints: `api.celechron.top` (update check), `api.github.com/repos/Celechron/...` (contributors), or `celechron.top` links. Update check reads `remote/version.json` from this repository via jsDelivr (`Fuse.checkUpdateUrl`).
+- Semester calendar config still comes from `calendar.celechron.top` with fallbacks to Hive cache and bundled `assets/calendar/<semester>.json`. Add a new bundled file each semester.
+- The About page must keep the line stating the project is derived from Celechron under GPLv3. The ICP record number of the upstream project must not be re-added.
+- Logo is `assets/logo.svg` (rendered with `flutter_svg`); launcher icons are generated from `assets/icon/` via `flutter_launcher_icons`. Keep the visual language minimal: one ring, two hands, one dot.
 
 ## Security and Privacy
 

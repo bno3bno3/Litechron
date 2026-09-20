@@ -356,7 +356,7 @@ class GradeDetailPage extends StatelessWidget {
           CupertinoColors.systemGroupedBackground, context),
       child: CustomScrollView(
         slivers: [
-          CelechronSliverTextHeader(
+          LitechronSliverTextHeader(
             subtitle: '成绩',
             right: Obx(
               () => Padding(

@@ -137,7 +137,7 @@ class _RecommendGpaRulePageState extends State<RecommendGpaRulePage> {
           CupertinoColors.systemGroupedBackground, context),
       child: CustomScrollView(
         slivers: [
-          const CelechronSliverTextHeader(subtitle: '推免绩点规则'),
+          const LitechronSliverTextHeader(subtitle: '推免绩点规则'),
           SliverToBoxAdapter(
             child: CupertinoListSection.insetGrouped(
               margin: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 10),

@@ -401,7 +401,7 @@ class CourseDetailPage extends StatelessWidget {
           CupertinoColors.systemGroupedBackground, context),
       child: CustomScrollView(
         slivers: [
-          const CelechronSliverTextHeader(subtitle: '课程详情'),
+          const LitechronSliverTextHeader(subtitle: '课程详情'),
           SliverToBoxAdapter(
             child: Container(
               padding: const EdgeInsets.only(bottom: 5, left: 16, right: 16),

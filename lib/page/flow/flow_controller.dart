@@ -292,7 +292,7 @@ class FlowController extends GetxController {
         existingDeadlineUid[x.uid] = x;
       }
     }
-    // 移除所有固定日程，只保留Celechron安排的DDL
+    // 移除所有固定日程，只保留Litechron安排的DDL
     for (var i = 0; i < flowList.length; i++) {
       if (flowList[i].type == PeriodType.user ||
           flowList[i].type == PeriodType.classes ||

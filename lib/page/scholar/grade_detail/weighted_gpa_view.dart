@@ -79,7 +79,7 @@ class WeightedGpaPage extends StatelessWidget {
             CupertinoColors.systemGroupedBackground, context),
         child: CustomScrollView(
           slivers: [
-            CelechronSliverTextHeader(
+            LitechronSliverTextHeader(
               subtitle: '单门课程权重',
               right: Obx(
                 () => Padding(

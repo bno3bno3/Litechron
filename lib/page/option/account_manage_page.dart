@@ -22,7 +22,7 @@ class AccountManagePage extends StatelessWidget {
       child: SafeArea(
         child: CustomScrollView(
           slivers: [
-            const CelechronSliverTextHeader(subtitle: '账号管理'),
+            const LitechronSliverTextHeader(subtitle: '账号管理'),
             SliverToBoxAdapter(
               child: Obx(() {
                 var accounts = _optionController.accountsSortedById;

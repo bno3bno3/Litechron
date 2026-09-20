@@ -2,14 +2,14 @@ import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 
-class CelechronSliverTextHeader extends StatelessWidget {
+class LitechronSliverTextHeader extends StatelessWidget {
   final String subtitle;
   final Widget? right;
   final Widget? bottom;
   final double fontSize;
   final bool firstPage;
 
-  const CelechronSliverTextHeader({
+  const LitechronSliverTextHeader({
     super.key,
     required this.subtitle,
     this.right,
@@ -22,7 +22,7 @@ class CelechronSliverTextHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return SliverPersistentHeader(
       pinned: true,
-      delegate: CelechronHeader(
+      delegate: LitechronHeader(
         fontSize: fontSize,
         firstPage: firstPage,
         subtitle: subtitle,
@@ -34,7 +34,7 @@ class CelechronSliverTextHeader extends StatelessWidget {
   }
 }
 
-class CelechronHeader extends SliverPersistentHeaderDelegate {
+class LitechronHeader extends SliverPersistentHeaderDelegate {
   final String subtitle;
   final Widget? bottom;
   final Widget? right;
@@ -42,7 +42,7 @@ class CelechronHeader extends SliverPersistentHeaderDelegate {
   final double fontSize;
   final bool firstPage;
 
-  CelechronHeader({
+  LitechronHeader({
     required this.subtitle,
     this.right,
     this.bottom,

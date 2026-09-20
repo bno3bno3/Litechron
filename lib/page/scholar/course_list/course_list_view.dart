@@ -64,7 +64,7 @@ class CourseListPage extends StatelessWidget {
           CupertinoColors.systemGroupedBackground, context),
       child: CustomScrollView(
         slivers: [
-          const CelechronSliverTextHeader(subtitle: '课程'),
+          const LitechronSliverTextHeader(subtitle: '课程'),
           SliverPinnedToBoxAdapter(
             child: Padding(
                 padding: const EdgeInsets.only(left: 16, right: 16, bottom: 10),

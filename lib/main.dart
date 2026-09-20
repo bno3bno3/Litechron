@@ -33,7 +33,7 @@ void main() async {
   Get.put(db.getOption(), tag: 'option');
   Get.put(db.getFuse().obs, tag: 'fuse');
 
-  runApp(const CelechronApp());
+  runApp(const LitechronApp());
 
   var scholar = Get.find<Rx<Scholar>>(tag: 'scholar');
   if (scholar.value.isLogan) {
@@ -52,14 +52,14 @@ void main() async {
   ECardWidgetMessenger.update();
 }
 
-class CelechronApp extends StatefulWidget {
-  const CelechronApp({super.key});
+class LitechronApp extends StatefulWidget {
+  const LitechronApp({super.key});
 
   @override
-  State<CelechronApp> createState() => _CelechronAppState();
+  State<LitechronApp> createState() => _LitechronAppState();
 }
 
-class _CelechronAppState extends State<CelechronApp>
+class _LitechronAppState extends State<LitechronApp>
     with WidgetsBindingObserver {
   @override
   void initState() {

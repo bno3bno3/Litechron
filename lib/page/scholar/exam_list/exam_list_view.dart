@@ -329,7 +329,7 @@ class _ExamListPageState extends State<ExamListPage> {
           CupertinoColors.systemGroupedBackground, context),
       child: CustomScrollView(
         slivers: [
-          const CelechronSliverTextHeader(
+          const LitechronSliverTextHeader(
             subtitle: '考试',
           ),
           SliverPinnedToBoxAdapter(
