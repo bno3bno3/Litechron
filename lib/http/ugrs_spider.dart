@@ -97,10 +97,8 @@ class UgrsSpider implements Spider {
   }
 
   Future<List<String?>> _doLogin() async {
-    try {
-      _httpClient.close(force: true);
-    } catch (_) {}
-    _initHttpClient();
+    // 不在这里重建 HttpClient：dart:io 的 HttpClient 本就不保存 Cookie，
+    // 重建只会让并发进行中的其他抓取以"连接已关闭"失败，再各自触发重登
     fetchGrs = false;
 
     var loginErrorMessages = <String?>[null];
@@ -150,6 +148,8 @@ class UgrsSpider implements Spider {
     try {
       _httpClient.close(force: true);
     } catch (_) {}
+    // 换一个新客户端，登出后的对象仍可再次登录
+    _initHttpClient();
     fetchGrs = false;
     _courses.logout();
     _zdbk.logout();

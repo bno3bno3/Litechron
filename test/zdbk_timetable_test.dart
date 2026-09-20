@@ -73,10 +73,66 @@ void main() {
     expect(client.requests, hasLength(6));
   });
 
+  // 回归：以前 login() 一开始就把会话字段清空，登录期间并发的请求会在
+  // `_jSessionId!` 上抛 "Null check operator used on a null value"
+  test('登录进行中时并发请求沿用旧会话，失效后改用新会话重试且不重复登录', () async {
+    final client = _ScriptedClient([
+      ..._loginResponses(), // 初始登录 → 会话 A
+      _loginResponses()[0], // 并发登录第 1 步（CAS 重定向）
+      _Response.text('', statusCode: 901), // 课表带会话 A → 已被新登录顶掉
+      _Response.text('', cookies: [
+        Cookie('JSESSIONID', 'session-b')..path = '/jwglxt',
+        Cookie('route', 'route-b'),
+      ]), // 并发登录第 2 步 → 会话 B
+      _Response.text(_timetableBody()), // 课表带会话 B → 成功
+    ]);
+    final zdbk = Zdbk();
+    await zdbk.login(client, Cookie('iPlanetDirectoryPro', 'test-sso'));
+
+    final relogin =
+        zdbk.login(client, Cookie('iPlanetDirectoryPro', 'test-sso'));
+    final result = await zdbk.getTimetable(client, '2025-2026', '1|秋');
+    await relogin;
+
+    expect(result.item1, isNull);
+    expect(result.item2.toList(), hasLength(1));
+    expect(client.requests, hasLength(6));
+    expect(client.responses, isEmpty);
+    final timetableRequests = client.requests
+        .where((r) => r.uri.path.endsWith('xskbcx_cxXsKb.html'))
+        .toList();
+    expect(timetableRequests, hasLength(2));
+    expect(timetableRequests.first.cookies.map((c) => c.value),
+        contains('test-session'));
+    expect(timetableRequests.last.cookies.map((c) => c.value),
+        contains('session-b'));
+  });
+
+  test('同一时刻多次登录只发一组登录请求', () async {
+    final client = _ScriptedClient([
+      ..._loginResponses(),
+      _Response.text(_timetableBody()),
+    ]);
+    final zdbk = Zdbk();
+    final sso = Cookie('iPlanetDirectoryPro', 'test-sso');
+
+    await Future.wait([
+      zdbk.login(client, sso),
+      zdbk.login(client, sso),
+      zdbk.login(client, sso),
+    ]);
+    final result = await zdbk.getTimetable(client, '2025-2026', '1|秋');
+
+    expect(result.item1, isNull);
+    expect(client.requests, hasLength(3));
+  });
+
   test('kbList不在xh前（字段顺序变化）时仍能解析', () async {
     // 老正则要求 kbList 后紧跟 "xh"，此响应故意把 xh 放在前面，只有 JSON 解析路径能通过
-    final body =
-        jsonEncode({'xh': '3230100000', 'kbList': [_kbEntry()]});
+    final body = jsonEncode({
+      'xh': '3230100000',
+      'kbList': [_kbEntry()]
+    });
     final client = _ScriptedClient([
       ..._loginResponses(),
       _Response.text(body),
@@ -92,7 +148,8 @@ void main() {
 
   test('响应不是纯JSON时退回旧版正则解析', () async {
     final entryJson = jsonEncode(_kbEntry());
-    final body = 'garbage-prefix{"kbList":[$entryJson],"xh":"3230100000"}suffix';
+    final body =
+        'garbage-prefix{"kbList":[$entryJson],"xh":"3230100000"}suffix';
     final client = _ScriptedClient([
       ..._loginResponses(),
       _Response.text(body),

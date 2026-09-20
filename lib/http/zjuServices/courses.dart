@@ -15,6 +15,7 @@ class Courses {
   DatabaseHelper? _db;
   Cookie? _session;
   Cookie? _iPlanetDirectoryPro;
+  Future<void>? _loginFuture;
 
   set db(DatabaseHelper? db) {
     _db = db;
@@ -22,13 +23,16 @@ class Courses {
 
   Future<Tuple<Exception?, List<Todo>>> getTodo(HttpClient httpClient) async {
     try {
-      await _ensureSession(httpClient);
-      var body = await _requestTodo(httpClient);
+      var session = await _requireSession(httpClient);
+      var body = await _requestTodo(httpClient, session);
 
       if (_isLoginPage(body)) {
-        _session = null;
-        await _ensureSession(httpClient);
-        body = await _requestTodo(httpClient);
+        // 会话失效：并发的登录若已换了新会话就直接用，否则重登一次
+        if (identical(_session, session)) {
+          await _relogin(httpClient);
+        }
+        session = await _requireSession(httpClient);
+        body = await _requestTodo(httpClient, session);
       }
       if (_isLoginPage(body)) {
         throw ExceptionWithMessage("未登录");
@@ -44,16 +48,35 @@ class Courses {
     }
   }
 
+  /// 登录学在浙大。已有登录进行中时直接等待它完成，不并发建立第二个会话
   Future<bool> login(HttpClient httpClient, Cookie? iPlanetDirectoryPro) async {
-    late HttpClientRequest request;
-    late HttpClientResponse response;
-
     if (iPlanetDirectoryPro == null) {
       throw ExceptionWithMessage("iPlanetDirectoryPro无效");
     }
-
-    _session = null;
     _iPlanetDirectoryPro = iPlanetDirectoryPro;
+
+    final inFlight = _loginFuture;
+    if (inFlight != null) {
+      await inFlight;
+      return true;
+    }
+    final future = _doLogin(httpClient, iPlanetDirectoryPro);
+    _loginFuture = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_loginFuture, future)) {
+        _loginFuture = null;
+      }
+    }
+    return true;
+  }
+
+  Future<void> _doLogin(
+      HttpClient httpClient, Cookie iPlanetDirectoryPro) async {
+    late HttpClientRequest request;
+    late HttpClientResponse response;
+    Cookie? session;
 
     var cookies = <Cookie>[iPlanetDirectoryPro];
 
@@ -73,7 +96,7 @@ class Courses {
       if (response.isRedirect) {
         if (response.headers.value(HttpHeaders.locationHeader)! ==
             ("https://courses.zju.edu.cn/user/index")) {
-          _session = response.cookies.firstWhere(
+          session = response.cookies.firstWhere(
             (cookie) => cookie.name == "session",
           );
           return;
@@ -85,33 +108,41 @@ class Courses {
     }
 
     await getWithCookies("https://courses.zju.edu.cn/user/index");
-    if (_session == null) {
+    if (session == null) {
       throw ExceptionWithMessage("无法获取session");
     }
-
-    return true;
+    // 登录成功后才替换，并发中的请求继续用各自取到的旧会话
+    _session = session;
   }
 
   void logout() {
     _session = null;
     _iPlanetDirectoryPro = null;
+    _loginFuture = null;
   }
 
-  Future<void> _ensureSession(HttpClient httpClient) async {
-    if (_session != null) return;
-
-    if (_iPlanetDirectoryPro == null) {
+  Future<void> _relogin(HttpClient httpClient) async {
+    final iPlanetDirectoryPro = _iPlanetDirectoryPro;
+    if (iPlanetDirectoryPro == null) {
       throw ExceptionWithMessage("未登录");
     }
-    await login(httpClient, _iPlanetDirectoryPro);
+    await login(httpClient, iPlanetDirectoryPro);
   }
 
-  Future<String> _requestTodo(HttpClient httpClient) async {
+  /// 当前会话 Cookie；没有时用 SSO 凭据重登取一个
+  Future<Cookie> _requireSession(HttpClient httpClient) async {
+    final session = _session;
+    if (session != null) return session;
+    await _relogin(httpClient);
+    return _session ?? (throw ExceptionWithMessage("未登录"));
+  }
+
+  Future<String> _requestTodo(HttpClient httpClient, Cookie session) async {
     final request = await httpClient.getUrl(_todoUri).timeout(
           const Duration(seconds: 8),
           onTimeout: () => throw ExceptionWithMessage("请求超时"),
         );
-    request.cookies.add(_session!);
+    request.cookies.add(session);
     final response = await request.close().timeout(
           const Duration(seconds: 8),
           onTimeout: () => throw ExceptionWithMessage("请求超时"),

@@ -22,16 +22,32 @@ class GrsNew {
     _db = db;
   }
 
+  /// 登录研究生院网。已有登录进行中时直接等待它完成，不并发建立第二个会话
   Future<void> login(HttpClient httpClient, Cookie? ssoCookie) async {
-    late HttpClientRequest req;
-    late HttpClientResponse res;
-
     if (ssoCookie == null) {
       throw ExceptionWithMessage("Invalid ssoCookie");
     }
-
-    _token = null;
     _ssoCookie = ssoCookie;
+
+    final inFlight = _reloginFuture;
+    if (inFlight != null) {
+      await inFlight;
+      return;
+    }
+    final future = _doLogin(httpClient, ssoCookie);
+    _reloginFuture = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_reloginFuture, future)) {
+        _reloginFuture = null;
+      }
+    }
+  }
+
+  Future<void> _doLogin(HttpClient httpClient, Cookie ssoCookie) async {
+    late HttpClientRequest req;
+    late HttpClientResponse res;
 
     req = await httpClient
         .getUrl(Uri.parse(
@@ -69,10 +85,12 @@ class GrsNew {
       throw ExceptionWithMessage("Invalid login info");
     }
     final loginResult = loginInfo["result"] as Map<String, dynamic>;
-    _token = loginResult["token"] as String?;
-    if (_token == null) {
+    final token = loginResult["token"] as String?;
+    if (token == null) {
       throw ExceptionWithMessage("Invalid token");
     }
+    // 登录成功后才替换，并发中的请求继续用各自取到的旧 token
+    _token = token;
   }
 
   void logout() {
@@ -86,22 +104,6 @@ class GrsNew {
     if (ssoCookie == null) {
       throw ExceptionWithMessage("会话已过期，请重新登录");
     }
-
-    final future = _reloginFuture ??= _doRelogin(
-      httpClient,
-      ssoCookie,
-    );
-    try {
-      await future;
-    } finally {
-      if (identical(_reloginFuture, future)) {
-        _reloginFuture = null;
-      }
-    }
-  }
-
-  Future<void> _doRelogin(HttpClient httpClient, Cookie ssoCookie) async {
-    _token = null;
     await login(httpClient, ssoCookie);
   }
 
@@ -124,15 +126,16 @@ class GrsNew {
     return false;
   }
 
-  Future<void> _ensureToken(HttpClient httpClient) async {
-    if (_token != null) return;
+  /// 当前 token；没有时用 SSO 凭据重登取一个
+  Future<String> _requireToken(HttpClient httpClient) async {
+    final token = _token;
+    if (token != null) return token;
 
-    if (_ssoCookie != null) {
-      await _relogin(httpClient);
-      return;
+    if (_ssoCookie == null) {
+      throw ExceptionWithMessage("not logged in");
     }
-
-    throw ExceptionWithMessage("not logged in");
+    await _relogin(httpClient);
+    return _token ?? (throw ExceptionWithMessage("not logged in"));
   }
 
   Future<Map<String, dynamic>> _requestJsonWithToken(
@@ -140,17 +143,22 @@ class GrsNew {
     Uri uri, {
     String method = 'GET',
   }) async {
-    await _ensureToken(httpClient);
-    var result = await _requestJson(httpClient, uri, method: method);
+    var token = await _requireToken(httpClient);
+    var result = await _requestJson(httpClient, uri, token, method: method);
     if (!_isTokenExpired(result)) return result;
 
-    await _relogin(httpClient);
-    return await _requestJson(httpClient, uri, method: method);
+    // token 失效：并发的其他请求若已换了新 token 就直接用，否则重登一次
+    if (_token == token) {
+      await _relogin(httpClient);
+    }
+    token = await _requireToken(httpClient);
+    return await _requestJson(httpClient, uri, token, method: method);
   }
 
   Future<Map<String, dynamic>> _requestJson(
     HttpClient httpClient,
-    Uri uri, {
+    Uri uri,
+    String token, {
     String method = 'GET',
   }) async {
     final request = await (method.toUpperCase() == 'POST'
@@ -160,7 +168,7 @@ class GrsNew {
       const Duration(seconds: 8),
       onTimeout: () => throw ExceptionWithMessage("request timeout"),
     );
-    request.headers.add("X-Access-Token", _token!);
+    request.headers.add("X-Access-Token", token);
     final response = await request.close().timeout(
           const Duration(seconds: 8),
           onTimeout: () => throw ExceptionWithMessage("request timeout"),

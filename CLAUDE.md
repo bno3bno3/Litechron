@@ -95,6 +95,8 @@ The ZJU scraping layer is brittle by nature. Preserve current behavior unless a 
 - `getEverything()` returns `Tuple7` (aliased as `EverythingTuple` in `spider.dart`) with login errors, fetch errors, semesters, grades, major GPA data, special dates, and todos. It also accepts an optional `onProgress` callback (async refresh) that reports accumulated partial data after each top-level fetch. Keep this contract stable unless all callers are updated.
 - Partial refresh failures intentionally preserve previously cached local data. Avoid clearing existing academic data merely because one remote service fails.
 - Timeout values, user agent, retryable error strings, and cookie invalidation checks affect real login reliability.
+- `Zdbk`, `GrsNew`, and `Courses` deduplicate concurrent logins and swap session cookies/tokens atomically only after a login succeeds. Do not null session fields at the start of `login()`, do not read them with `!` inside request code (take a snapshot via the `_require*` helpers), and do not force-close or recreate the shared `HttpClient` during relogin. Regression tests live in `test/zdbk_timetable_test.dart`.
+- Background refresh registers its periodic task with a 15-minute `initialDelay` so it never logs into ZDBK while the foreground is refreshing right after login (ZDBK keeps one session per account; a second login invalidates the first).
 
 ## UI and Controller Patterns
 

@@ -139,7 +139,8 @@ class OptionController extends GetxController {
 
   void _updateBackgroundWorker(bool enabled) {
     Workmanager()
-        .cancelByUniqueName('io.github.bno3bno3.litechron.backgroundScholarFetch')
+        .cancelByUniqueName(
+            'io.github.bno3bno3.litechron.backgroundScholarFetch')
         .then((value) {
       if (Platform.isIOS) return Workmanager().printScheduledTasks();
     });
@@ -162,6 +163,9 @@ class OptionController extends GetxController {
           .then((value) => Workmanager().registerPeriodicTask(
                 'io.github.bno3bno3.litechron.backgroundScholarFetch',
                 'io.github.bno3bno3.litechron.backgroundScholarFetch',
+                // 首次运行推迟一个周期：刚登录或刚改开关时前台正在刷新，
+                // 后台任务此刻登录会顶掉前台的教务网会话，让首刷整体失败
+                initialDelay: const Duration(minutes: 15),
                 frequency: const Duration(minutes: 15),
                 constraints: Constraints(
                   networkType: NetworkType.connected,

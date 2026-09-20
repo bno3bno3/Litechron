@@ -23,17 +23,35 @@ class Zdbk {
     _db = db;
   }
 
+  /// 登录教务网。已有登录进行中时直接等待它完成，不并发建立第二个会话：
+  /// 教务网同一账号只保留一个会话，重复登录会让并发中的请求被踢下线。
   Future<bool> login(HttpClient httpClient, Cookie? iPlanetDirectoryPro) async {
-    late HttpClientRequest request;
-    late HttpClientResponse response;
-
     if (iPlanetDirectoryPro == null) {
       throw ExceptionWithMessage("iPlanetDirectoryPro无效");
     }
-    _jSessionId = null;
-    _route = null;
-    _captcha = null;
     _iPlanetDirectoryPro = iPlanetDirectoryPro;
+
+    final inFlight = _reloginFuture;
+    if (inFlight != null) {
+      await inFlight;
+      return true;
+    }
+    final future = _doLogin(httpClient, iPlanetDirectoryPro);
+    _reloginFuture = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_reloginFuture, future)) {
+        _reloginFuture = null;
+      }
+    }
+    return true;
+  }
+
+  Future<void> _doLogin(
+      HttpClient httpClient, Cookie iPlanetDirectoryPro) async {
+    late HttpClientRequest request;
+    late HttpClientResponse response;
 
     request = await httpClient
         .getUrl(Uri.parse(
@@ -60,22 +78,25 @@ class Zdbk {
         onTimeout: () => throw ExceptionWithMessage("请求超时"));
     response.drain();
 
-    if (response.cookies.any((element) =>
-        element.name == 'JSESSIONID' && element.path == '/jwglxt')) {
-      _jSessionId = response.cookies.firstWhere((element) =>
-          element.name == 'JSESSIONID' && element.path == '/jwglxt');
-    } else {
+    final jSessionId = response.cookies
+        .where((element) =>
+            element.name == 'JSESSIONID' && element.path == '/jwglxt')
+        .firstOrNull;
+    if (jSessionId == null) {
       throw ExceptionWithMessage("无法获取JSESSIONID");
     }
-
-    if (response.cookies.any((element) => element.name == 'route')) {
-      _route =
-          response.cookies.firstWhere((element) => element.name == 'route');
-    } else {
+    final route = response.cookies
+        .where((element) => element.name == 'route')
+        .firstOrNull;
+    if (route == null) {
       throw ExceptionWithMessage("无法获取route");
     }
 
-    return true;
+    // 登录成功后才整套替换，中间没有 await：并发中的请求要么拿到整套旧值、
+    // 要么整套新值，不会出现只剩一半的会话
+    _jSessionId = jSessionId;
+    _route = route;
+    _captcha = null;
   }
 
   void logout() {
@@ -84,6 +105,16 @@ class Zdbk {
     _iPlanetDirectoryPro = null;
     _captcha = null;
     _reloginFuture = null;
+  }
+
+  /// 当前会话的两个 Cookie；尚未登录或已登出时视为会话失效
+  List<Cookie> _requireSession() {
+    final jSessionId = _jSessionId;
+    final route = _route;
+    if (jSessionId == null || route == null) {
+      throw SessionExpiredException();
+    }
+    return [jSessionId, route];
   }
 
   void _checkSessionExpired(HttpClientResponse response, String responseText) {
@@ -112,7 +143,7 @@ class Zdbk {
   // 教务网对课表查询接口按会话限流，触发时返回 HTTP 921"请求过于频繁"。
   // 2026-09 实测：约 1 秒内恢复，且计数按会话（重登即重置）。
   // 因此课表请求被限流时原地退避重试即可，不应重新登录——
-  // 重登会 force close 共享 HttpClient，波及并发进行中的其他抓取。
+  // 教务网同一账号只保留一个会话，重登会让并发进行中的其他抓取被踢下线。
   static Duration rateLimitBackoff = const Duration(milliseconds: 1200);
   static const maxRateLimitRetries = 4;
 
@@ -137,37 +168,30 @@ class Zdbk {
     if (iPlanetDirectoryPro == null) {
       throw ExceptionWithMessage("会话已过期，请重新登录");
     }
-
-    final future = _reloginFuture ??= _doRelogin(
-      httpClient,
-      iPlanetDirectoryPro,
-    );
-    try {
-      await future;
-    } finally {
-      if (identical(_reloginFuture, future)) {
-        _reloginFuture = null;
-      }
-    }
-  }
-
-  Future<void> _doRelogin(
-    HttpClient httpClient,
-    Cookie iPlanetDirectoryPro,
-  ) async {
     await login(httpClient, iPlanetDirectoryPro);
   }
 
-  Future<T> _withAutoRelogin<T>(
-      HttpClient httpClient, Future<T> Function() action) async {
-    for (var i = 0; i < 2; i++) {
+  /// 用当前会话执行 [action]；会话失效时重登后重试。
+  ///
+  /// 会话在进入 action 前整套取出并传入，action 内不得再读字段。
+  /// 失效时若发现会话已被并发的其他请求换成新的，直接用新会话重试，
+  /// 不再重复登录（重复登录会让刚换好的会话又失效）。
+  Future<T> _withAutoRelogin<T>(HttpClient httpClient,
+      Future<T> Function(List<Cookie> session) action) async {
+    for (var i = 0; i < 3; i++) {
+      List<Cookie> session;
       try {
-        if (_jSessionId == null || _route == null) {
-          await _relogin(httpClient);
-        }
-        return await action();
+        session = _requireSession();
       } on SessionExpiredException {
         await _relogin(httpClient);
+        continue;
+      }
+      try {
+        return await action(session);
+      } on SessionExpiredException {
+        if (identical(_jSessionId, session[0])) {
+          await _relogin(httpClient);
+        }
       }
     }
     throw ExceptionWithMessage("会话已过期且自动重登失败");
@@ -175,7 +199,7 @@ class Zdbk {
 
   Future<Tuple<Exception?, Tuple<List<double>, String>>> getMajorGrade(
       HttpClient httpClient) async {
-    return await _withAutoRelogin(httpClient, () async {
+    return await _withAutoRelogin(httpClient, (session) async {
       late HttpClientRequest request;
       late HttpClientResponse response;
 
@@ -193,8 +217,7 @@ class Zdbk {
               'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36')
           ..add('Accept', 'application/json, text/javascript, */*; q=0.01')
           ..add('X-Requested-With', 'XMLHttpRequest');
-        request.cookies.add(_jSessionId!);
-        request.cookies.add(_route!);
+        request.cookies.addAll(session);
         request.followRedirects = false;
         response = await request.close().timeout(const Duration(seconds: 8),
             onTimeout: () => throw ExceptionWithMessage("请求超时"));
@@ -243,7 +266,7 @@ class Zdbk {
 
   Future<Tuple<Exception?, Iterable<Grade>>> getTranscript(
       HttpClient httpClient) async {
-    return await _withAutoRelogin(httpClient, () async {
+    return await _withAutoRelogin(httpClient, (session) async {
       late HttpClientRequest request;
       late HttpClientResponse response;
 
@@ -261,8 +284,7 @@ class Zdbk {
               'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36')
           ..add('Accept', 'application/json, text/javascript, */*; q=0.01')
           ..add('X-Requested-With', 'XMLHttpRequest');
-        request.cookies.add(_jSessionId!);
-        request.cookies.add(_route!);
+        request.cookies.addAll(session);
         request.followRedirects = false;
         response = await request.close().timeout(const Duration(seconds: 8),
             onTimeout: () => throw ExceptionWithMessage("请求超时"));
@@ -299,7 +321,7 @@ class Zdbk {
   Future<Tuple<Exception?, Iterable<Session>>> getTimetable(
       HttpClient httpClient, String year, String semester,
       {bool allowUserInteraction = false}) async {
-    return await _withAutoRelogin(httpClient, () async {
+    return await _withAutoRelogin(httpClient, (session) async {
       late HttpClientRequest request;
       late HttpClientResponse response;
 
@@ -320,8 +342,7 @@ class Zdbk {
                 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36')
             ..add('Accept', 'application/json, text/javascript, */*; q=0.01')
             ..add('X-Requested-With', 'XMLHttpRequest');
-          request.cookies.add(_jSessionId!);
-          request.cookies.add(_route!);
+          request.cookies.addAll(session);
           request.headers.contentType = ContentType(
               'application', 'x-www-form-urlencoded',
               charset: 'utf-8');
@@ -349,11 +370,11 @@ class Zdbk {
             if (!allowUserInteraction) {
               throw ExceptionWithMessage("需要验证码");
             }
-            var imageBytes = await getCaptcha(httpClient);
+            var imageBytes = await getCaptcha(httpClient, session: session);
             var captcha = await ImageCodePortal.show(
                 imageBytes: imageBytes,
                 onRefresh: () async {
-                  return await getCaptcha(httpClient);
+                  return await getCaptcha(httpClient, session: session);
                 });
             if (captcha == null) {
               throw ExceptionWithMessage("验证码未填写");
@@ -365,8 +386,7 @@ class Zdbk {
           if (responseText == "null") return Tuple(null, []);
           var kbList = _extractKbList(responseText);
           if (kbList == null) {
-            throw ExceptionWithMessage(
-                "无法解析课表（HTTP ${response.statusCode}）");
+            throw ExceptionWithMessage("无法解析课表（HTTP ${response.statusCode}）");
           }
           _db?.setCachedWebPage(
               'zdbk_Timetable$year$semester', jsonEncode(kbList));
@@ -409,7 +429,7 @@ class Zdbk {
 
   Future<Tuple<Exception?, Iterable<ExamDto>>> getExamsDto(
       HttpClient httpClient) async {
-    return await _withAutoRelogin(httpClient, () async {
+    return await _withAutoRelogin(httpClient, (session) async {
       late HttpClientRequest request;
       late HttpClientResponse response;
 
@@ -427,8 +447,7 @@ class Zdbk {
               'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36')
           ..add('Accept', 'application/json, text/javascript, */*; q=0.01')
           ..add('X-Requested-With', 'XMLHttpRequest');
-        request.cookies.add(_jSessionId!);
-        request.cookies.add(_route!);
+        request.cookies.addAll(session);
         request.followRedirects = false;
         response = await request.close().timeout(const Duration(seconds: 8),
             onTimeout: () => throw ExceptionWithMessage("请求超时"));
@@ -464,7 +483,7 @@ class Zdbk {
 
   Future<Tuple<Exception?, Map<String, double>>> getPracticeScores(
       HttpClient httpClient, String studentId) async {
-    return await _withAutoRelogin(httpClient, () async {
+    return await _withAutoRelogin(httpClient, (session) async {
       late HttpClientRequest request;
       late HttpClientResponse response;
 
@@ -482,8 +501,7 @@ class Zdbk {
               'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36')
           ..add('Accept',
               'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8');
-        request.cookies.add(_jSessionId!);
-        request.cookies.add(_route!);
+        request.cookies.addAll(session);
         request.followRedirects = false;
         response = await request.close().timeout(const Duration(seconds: 8),
             onTimeout: () => throw ExceptionWithMessage("请求超时"));
@@ -595,11 +613,16 @@ class Zdbk {
     });
   }
 
-  Future<Uint8List> getCaptcha(HttpClient httpClient) async {
+  /// 获取验证码图片。[session] 缺省时用当前会话，未登录则报错
+  Future<Uint8List> getCaptcha(HttpClient httpClient,
+      {List<Cookie>? session}) async {
     late HttpClientRequest request;
     late HttpClientResponse response;
 
-    if (_jSessionId == null || _route == null) {
+    List<Cookie> cookies;
+    try {
+      cookies = session ?? _requireSession();
+    } on SessionExpiredException {
       throw ExceptionWithMessage("未登录");
     }
     request = await httpClient
@@ -607,8 +630,7 @@ class Zdbk {
             "https://zdbk.zju.edu.cn/jwglxt/kaptcha?time=${DateTime.now().millisecondsSinceEpoch}"))
         .timeout(const Duration(seconds: 8),
             onTimeout: () => throw ExceptionWithMessage("请求超时"));
-    request.cookies.add(_jSessionId!);
-    request.cookies.add(_route!);
+    request.cookies.addAll(cookies);
     request.followRedirects = false;
     response = await request.close().timeout(const Duration(seconds: 8),
         onTimeout: () => throw ExceptionWithMessage("请求超时"));
