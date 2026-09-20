@@ -1,7 +1,7 @@
-import 'package:celechron/model/semester.dart';
-import 'package:celechron/model/session.dart';
+import 'package:litechron/model/semester.dart';
+import 'package:litechron/model/session.dart';
 import 'package:get/get.dart';
-import 'package:celechron/model/scholar.dart';
+import 'package:litechron/model/scholar.dart';
 
 class CourseScheduleController extends GetxController {
   final _scholar = Get.find<Rx<Scholar>>(tag: 'scholar');

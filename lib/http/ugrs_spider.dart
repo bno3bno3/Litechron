@@ -1,17 +1,17 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:celechron/http/retry_helper.dart';
-import 'package:celechron/http/zjuServices/courses.dart';
-import 'package:celechron/model/todo.dart';
+import 'package:litechron/http/retry_helper.dart';
+import 'package:litechron/http/zjuServices/courses.dart';
+import 'package:litechron/model/todo.dart';
 import 'package:get/get.dart';
 
-import 'package:celechron/http/spider.dart';
-import 'package:celechron/http/time_config_service.dart';
-import 'package:celechron/http/zjuServices/grs_new.dart';
-import 'package:celechron/utils/tuple.dart';
-import 'package:celechron/database/database_helper.dart';
-import 'package:celechron/model/grade.dart';
-import 'package:celechron/model/semester.dart';
+import 'package:litechron/http/spider.dart';
+import 'package:litechron/http/time_config_service.dart';
+import 'package:litechron/http/zjuServices/grs_new.dart';
+import 'package:litechron/utils/tuple.dart';
+import 'package:litechron/database/database_helper.dart';
+import 'package:litechron/model/grade.dart';
+import 'package:litechron/model/semester.dart';
 
 import 'zjuServices/zjuam.dart';
 import 'zjuServices/zdbk.dart';

@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:celechron/worker/fuse.dart';
+import 'package:litechron/worker/fuse.dart';
 
 /// Fuse 里硬编码的版本号必须与 pubspec.yaml 一致，否则更新检查会误判。
 void main() {

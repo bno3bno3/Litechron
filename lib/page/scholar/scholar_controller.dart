@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:get/get.dart';
 
-import 'package:celechron/http/spider.dart';
-import 'package:celechron/model/todo.dart';
-import 'package:celechron/model/semester.dart';
-import 'package:celechron/model/scholar.dart';
-import 'package:celechron/model/option.dart';
+import 'package:litechron/http/spider.dart';
+import 'package:litechron/model/todo.dart';
+import 'package:litechron/model/semester.dart';
+import 'package:litechron/model/scholar.dart';
+import 'package:litechron/model/option.dart';
 
 class ScholarController extends GetxController {
   final _scholar = Get.find<Rx<Scholar>>(tag: 'scholar');

@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:celechron/design/persistent_headers.dart';
+import 'package:litechron/design/persistent_headers.dart';
 
 class CreditsPage extends StatelessWidget {
   final String version;

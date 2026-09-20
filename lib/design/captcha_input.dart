@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
-import 'package:celechron/utils/global.dart';
+import 'package:litechron/utils/global.dart';
 
 class ImageCodePortal {
   static final TextEditingController _inputController = TextEditingController();

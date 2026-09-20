@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 
-import 'package:celechron/design/persistent_headers.dart';
-import 'package:celechron/model/option.dart';
-import 'package:celechron/model/recommend_gpa_rule.dart';
-import 'package:celechron/page/scholar/grade_detail/weighted_gpa_view.dart';
+import 'package:litechron/design/persistent_headers.dart';
+import 'package:litechron/model/option.dart';
+import 'package:litechron/model/recommend_gpa_rule.dart';
+import 'package:litechron/page/scholar/grade_detail/weighted_gpa_view.dart';
 import 'option_controller.dart';
 
 /// 推免绩点规则页

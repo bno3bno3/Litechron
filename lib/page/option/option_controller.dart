@@ -6,21 +6,21 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
 
-import 'package:celechron/model/scholar.dart';
-import 'package:celechron/model/option.dart';
-import 'package:celechron/model/recommend_gpa_rule.dart';
-import 'package:celechron/model/task.dart';
-import 'package:celechron/model/period.dart';
-import 'package:celechron/database/database_helper.dart';
-import 'package:celechron/page/scholar/scholar_controller.dart';
-import 'package:celechron/worker/ecard_widget_messenger.dart';
-import 'package:celechron/worker/fuse.dart';
-import 'package:celechron/worker/background_app_refresh.dart';
-import 'package:celechron/utils/platform_features.dart';
-import 'package:celechron/model/calendar_to_system.dart';
-import 'package:celechron/model/calendar_to_ical.dart';
+import 'package:litechron/model/scholar.dart';
+import 'package:litechron/model/option.dart';
+import 'package:litechron/model/recommend_gpa_rule.dart';
+import 'package:litechron/model/task.dart';
+import 'package:litechron/model/period.dart';
+import 'package:litechron/database/database_helper.dart';
+import 'package:litechron/page/scholar/scholar_controller.dart';
+import 'package:litechron/worker/ecard_widget_messenger.dart';
+import 'package:litechron/worker/fuse.dart';
+import 'package:litechron/worker/background_app_refresh.dart';
+import 'package:litechron/utils/platform_features.dart';
+import 'package:litechron/model/calendar_to_system.dart';
+import 'package:litechron/model/calendar_to_ical.dart';
 
-import 'package:celechron/utils/utils.dart';
+import 'package:litechron/utils/utils.dart';
 
 class OptionController extends GetxController {
   final _option = Get.find<Option>(tag: 'option');

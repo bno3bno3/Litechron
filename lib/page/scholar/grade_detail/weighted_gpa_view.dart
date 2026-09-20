@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
-import 'package:celechron/design/custom_colors.dart';
-import 'package:celechron/design/round_rectangle_card.dart';
-import 'package:celechron/design/two_line_card.dart';
-import 'package:celechron/design/persistent_headers.dart';
-import 'package:celechron/page/scholar/grade_detail/weighted_gpa_controller.dart';
+import 'package:litechron/design/custom_colors.dart';
+import 'package:litechron/design/round_rectangle_card.dart';
+import 'package:litechron/design/two_line_card.dart';
+import 'package:litechron/design/persistent_headers.dart';
+import 'package:litechron/page/scholar/grade_detail/weighted_gpa_controller.dart';
 
 /// 单门课程权重页
 ///

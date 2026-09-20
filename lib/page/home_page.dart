@@ -4,13 +4,13 @@ import 'package:flutter/material.dart' show Icons;
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
-import 'package:celechron/page/scholar/scholar_view.dart';
-import 'package:celechron/page/flow/flow_view.dart';
-import 'package:celechron/page/task/task_view.dart';
-import 'package:celechron/page/calendar/calendar_view.dart';
-import 'package:celechron/page/option/option_view.dart';
+import 'package:litechron/page/scholar/scholar_view.dart';
+import 'package:litechron/page/flow/flow_view.dart';
+import 'package:litechron/page/task/task_view.dart';
+import 'package:litechron/page/calendar/calendar_view.dart';
+import 'package:litechron/page/option/option_view.dart';
 
-import 'package:celechron/worker/fuse.dart';
+import 'package:litechron/worker/fuse.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});

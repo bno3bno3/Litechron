@@ -138,7 +138,7 @@ If Pigeon interfaces change, regenerate the corresponding Dart/native outputs an
 
 ## Brand and Identifiers
 
-- App name is **Litechron**. The Dart package name is still `celechron` (imports use `package:celechron/`); do not treat that as a user-visible name.
+- App name is **Litechron**. The Dart package name is `litechron` (imports use `package:litechron/`). The Pigeon channel name is derived from it; regenerate with `dart run pigeon --input lib/pigeon/prompt/flow_message_prompt.dart` (pigeon pinned to 18.0.1) and re-add `Codable` to the Swift DTOs afterwards because `AppDelegate.swift` JSON-encodes them.
 - Application ID / bundle ID / App Group base is `io.github.bno3bno3.litechron`. URL scheme is `litechron`. Keychain service name is `Litechron`. System calendar name is `Litechron课表`. These differ from official Celechron on purpose so both apps coexist; never revert them.
 - Do not reintroduce upstream endpoints: `api.celechron.top` (update check), `api.github.com/repos/Celechron/...` (contributors), or `celechron.top` links. Update check reads `remote/version.json` from this repository via jsDelivr (`Fuse.checkUpdateUrl`).
 - Semester calendar config still comes from `calendar.celechron.top` with fallbacks to Hive cache and bundled `assets/calendar/<semester>.json`. Add a new bundled file each semester.

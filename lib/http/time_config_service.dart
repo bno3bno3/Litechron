@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:flutter/services.dart' show rootBundle;
 
-import 'package:celechron/http/zjuServices/exceptions.dart';
-import 'package:celechron/utils/tuple.dart';
+import 'package:litechron/http/zjuServices/exceptions.dart';
+import 'package:litechron/utils/tuple.dart';
 
-import 'package:celechron/database/database_helper.dart';
+import 'package:litechron/database/database_helper.dart';
 
 /// 校历配置（节次时间、学期起止、假期与调休）。
 ///

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:hive/hive.dart';
-import 'package:celechron/model/option.dart';
+import 'package:litechron/model/option.dart';
 
 class CourseIdMapAdapter extends TypeAdapter<CourseIdMap> {
   @override

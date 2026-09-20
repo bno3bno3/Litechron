@@ -1,14 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:celechron/utils/tuple.dart';
+import 'package:litechron/utils/tuple.dart';
 import 'package:flutter/foundation.dart';
 
-import 'package:celechron/database/database_helper.dart';
-import 'package:celechron/utils/gpa_helper.dart';
-import 'package:celechron/model/grade.dart';
-import 'package:celechron/model/session.dart';
-import 'package:celechron/model/exams_dto.dart';
-import 'package:celechron/design/captcha_input.dart';
+import 'package:litechron/database/database_helper.dart';
+import 'package:litechron/utils/gpa_helper.dart';
+import 'package:litechron/model/grade.dart';
+import 'package:litechron/model/session.dart';
+import 'package:litechron/model/exams_dto.dart';
+import 'package:litechron/design/captcha_input.dart';
 import 'exceptions.dart';
 
 class Zdbk {

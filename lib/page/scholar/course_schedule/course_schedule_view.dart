@@ -1,14 +1,14 @@
 import 'dart:math';
 
-import 'package:celechron/design/custom_colors.dart';
-import 'package:celechron/utils/tuple.dart';
-import 'package:celechron/model/session.dart';
-import 'package:celechron/design/persistent_headers.dart';
+import 'package:litechron/design/custom_colors.dart';
+import 'package:litechron/utils/tuple.dart';
+import 'package:litechron/model/session.dart';
+import 'package:litechron/design/persistent_headers.dart';
 import 'course_schedule_controller.dart';
 import 'package:get/get.dart';
-import 'package:celechron/design/animate_button.dart';
-import 'package:celechron/design/round_rectangle_card.dart';
-import 'package:celechron/design/two_line_card.dart';
+import 'package:litechron/design/animate_button.dart';
+import 'package:litechron/design/round_rectangle_card.dart';
+import 'package:litechron/design/two_line_card.dart';
 import 'course_card.dart';
 import 'package:flutter/cupertino.dart';
 

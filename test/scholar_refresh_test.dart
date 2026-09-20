@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:celechron/http/spider.dart';
-import 'package:celechron/model/scholar.dart';
-import 'package:celechron/model/semester.dart';
-import 'package:celechron/page/option/option_controller.dart';
+import 'package:litechron/http/spider.dart';
+import 'package:litechron/model/scholar.dart';
+import 'package:litechron/model/semester.dart';
+import 'package:litechron/page/option/option_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 

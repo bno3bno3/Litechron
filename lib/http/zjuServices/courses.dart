@@ -4,10 +4,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:celechron/database/database_helper.dart';
-import 'package:celechron/http/zjuServices/exceptions.dart';
-import 'package:celechron/utils/tuple.dart';
-import 'package:celechron/model/todo.dart';
+import 'package:litechron/database/database_helper.dart';
+import 'package:litechron/http/zjuServices/exceptions.dart';
+import 'package:litechron/utils/tuple.dart';
+import 'package:litechron/model/todo.dart';
 
 class Courses {
   static final Uri _todoUri = Uri.parse("https://courses.zju.edu.cn/api/todos");

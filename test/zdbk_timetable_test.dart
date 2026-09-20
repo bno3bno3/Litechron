@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:collection';
 import 'dart:io';
 
-import 'package:celechron/http/zjuServices/zdbk.dart';
+import 'package:litechron/http/zjuServices/zdbk.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // 2026-09 实测：教务网课表查询接口按会话限流，触发时返回

@@ -7,7 +7,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:get/get.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'package:celechron/design/persistent_headers.dart';
+import 'package:litechron/design/persistent_headers.dart';
 import '../../http/zjuServices/ecard.dart';
 import '../../utils/utils.dart';
 

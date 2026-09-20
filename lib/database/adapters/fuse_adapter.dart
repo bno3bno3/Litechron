@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:hive/hive.dart';
-import 'package:celechron/worker/fuse.dart';
+import 'package:litechron/worker/fuse.dart';
 
 class FuseAdapter extends TypeAdapter<Fuse> {
   @override

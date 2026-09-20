@@ -157,7 +157,7 @@ class FlowMessengerSetup {
   /// Sets up an instance of `FlowMessenger` to handle messages through the `binaryMessenger`.
   static func setUp(binaryMessenger: FlutterBinaryMessenger, api: FlowMessenger?, messageChannelSuffix: String = "") {
     let channelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
-    let transferChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.celechron.FlowMessenger.transfer\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    let transferChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.litechron.FlowMessenger.transfer\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       transferChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]

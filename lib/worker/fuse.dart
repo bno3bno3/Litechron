@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:get/get.dart';
 
-import 'package:celechron/database/database_helper.dart';
+import 'package:litechron/database/database_helper.dart';
 
 class Fuse {
   late DateTime lastUpdateTime;

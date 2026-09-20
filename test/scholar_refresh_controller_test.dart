@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:celechron/model/option.dart';
-import 'package:celechron/page/option/option_controller.dart';
-import 'package:celechron/page/scholar/scholar_controller.dart';
+import 'package:litechron/model/option.dart';
+import 'package:litechron/page/option/option_controller.dart';
+import 'package:litechron/page/scholar/scholar_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 

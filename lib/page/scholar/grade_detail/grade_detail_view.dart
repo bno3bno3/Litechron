@@ -1,15 +1,15 @@
-import 'package:celechron/design/custom_colors.dart';
-import 'package:celechron/utils/tuple.dart';
-import 'package:celechron/model/grade.dart';
-import 'package:celechron/model/semester.dart';
+import 'package:litechron/design/custom_colors.dart';
+import 'package:litechron/utils/tuple.dart';
+import 'package:litechron/model/grade.dart';
+import 'package:litechron/model/semester.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
-import 'package:celechron/design/round_rectangle_card.dart';
-import 'package:celechron/design/two_line_card.dart';
-import 'package:celechron/design/persistent_headers.dart';
+import 'package:litechron/design/round_rectangle_card.dart';
+import 'package:litechron/design/two_line_card.dart';
+import 'package:litechron/design/persistent_headers.dart';
 import 'grade_card.dart';
 import 'grade_detail_controller.dart';
-import 'package:celechron/utils/gpa_helper.dart';
+import 'package:litechron/utils/gpa_helper.dart';
 
 class GradeDetailPage extends StatelessWidget {
   final _gradeDetailController = Get.put(GradeDetailController());

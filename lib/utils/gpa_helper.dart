@@ -1,6 +1,6 @@
-import 'package:celechron/utils/tuple.dart';
-import 'package:celechron/model/grade.dart';
-import 'package:celechron/model/recommend_gpa_rule.dart';
+import 'package:litechron/utils/tuple.dart';
+import 'package:litechron/model/grade.dart';
+import 'package:litechron/model/recommend_gpa_rule.dart';
 
 class GpaHelper {
   /// 按推免规则计算五分制推免绩点

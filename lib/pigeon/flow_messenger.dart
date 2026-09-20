@@ -134,7 +134,7 @@ class FlowMessenger {
 
   Future<bool> transfer(FlowMessage data) async {
     final String __pigeon_channelName =
-        'dev.flutter.pigeon.celechron.FlowMessenger.transfer$__pigeon_messageChannelSuffix';
+        'dev.flutter.pigeon.litechron.FlowMessenger.transfer$__pigeon_messageChannelSuffix';
     final BasicMessageChannel<Object?> __pigeon_channel =
         BasicMessageChannel<Object?>(
       __pigeon_channelName,

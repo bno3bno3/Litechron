@@ -1,4 +1,4 @@
-import 'package:celechron/design/persistent_headers.dart';
+import 'package:litechron/design/persistent_headers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 

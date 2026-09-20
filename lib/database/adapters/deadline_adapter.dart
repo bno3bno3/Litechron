@@ -1,5 +1,5 @@
 import 'package:hive/hive.dart';
-import 'package:celechron/model/task.dart';
+import 'package:litechron/model/task.dart';
 
 class DeadlineStatusAdapter extends TypeAdapter<TaskStatus> {
   @override

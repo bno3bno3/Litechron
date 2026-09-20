@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:celechron/http/spider.dart';
+import 'package:litechron/http/spider.dart';
 
 void main() {
   group('moduleStatusesFromErrors', () {

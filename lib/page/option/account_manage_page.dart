@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 
-import 'package:celechron/design/persistent_headers.dart';
+import 'package:litechron/design/persistent_headers.dart';
 import 'login_page.dart';
 import 'option_controller.dart';
 

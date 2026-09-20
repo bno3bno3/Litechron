@@ -1,11 +1,11 @@
 import 'dart:math';
 
-import 'package:celechron/page/scholar/grade_detail/grade_detail_controller.dart';
+import 'package:litechron/page/scholar/grade_detail/grade_detail_controller.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 
-import 'package:celechron/model/grade.dart';
-import 'package:celechron/page/scholar/course_detail/course_detail_view.dart';
+import 'package:litechron/model/grade.dart';
+import 'package:litechron/page/scholar/course_detail/course_detail_view.dart';
 
 class GradeCard extends StatefulWidget {
   final Grade grade;

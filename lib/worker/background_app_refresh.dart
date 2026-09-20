@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:celechron/model/scholar.dart';
+import 'package:litechron/model/scholar.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';

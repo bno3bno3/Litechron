@@ -4,9 +4,9 @@ import 'package:crypto/crypto.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:celechron/model/period.dart';
-import 'package:celechron/model/scholar.dart';
-import 'package:celechron/model/semester.dart';
+import 'package:litechron/model/period.dart';
+import 'package:litechron/model/scholar.dart';
+import 'package:litechron/model/semester.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 

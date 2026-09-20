@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:get/get.dart';
-import 'package:celechron/database/database_helper.dart';
-import 'package:celechron/model/task.dart';
+import 'package:litechron/database/database_helper.dart';
+import 'package:litechron/model/task.dart';
 
 class TaskController extends GetxController {
   final taskList = Get.find<RxList<Task>>(tag: 'taskList');

@@ -1,18 +1,18 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:celechron/design/custom_colors.dart';
-import 'package:celechron/design/custom_decoration.dart';
-import 'package:celechron/utils/time_helper.dart';
+import 'package:litechron/design/custom_colors.dart';
+import 'package:litechron/design/custom_decoration.dart';
+import 'package:litechron/utils/time_helper.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import 'package:celechron/database/database_helper.dart';
-import 'package:celechron/model/period.dart';
-import 'package:celechron/utils/utils.dart';
+import 'package:litechron/database/database_helper.dart';
+import 'package:litechron/model/period.dart';
+import 'package:litechron/utils/utils.dart';
 
-import 'package:celechron/design/sub_title.dart';
-import 'package:celechron/design/round_rectangle_card.dart';
-import 'package:celechron/page/scholar/course_detail/course_detail_view.dart';
+import 'package:litechron/design/sub_title.dart';
+import 'package:litechron/design/round_rectangle_card.dart';
+import 'package:litechron/page/scholar/course_detail/course_detail_view.dart';
 import 'flow_controller.dart';
 
 class FlowPage extends StatelessWidget {

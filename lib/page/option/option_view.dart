@@ -1,13 +1,13 @@
-import 'package:celechron/utils/platform_features.dart';
+import 'package:litechron/utils/platform_features.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'package:url_launcher/url_launcher_string.dart';
 
-import 'package:celechron/utils/utils.dart';
-import 'package:celechron/model/option.dart';
-import 'package:celechron/design/cupertino_async_switch.dart';
-import 'package:celechron/worker/fuse.dart';
+import 'package:litechron/utils/utils.dart';
+import 'package:litechron/model/option.dart';
+import 'package:litechron/design/cupertino_async_switch.dart';
+import 'package:litechron/worker/fuse.dart';
 
 import 'allow_time_edit_page.dart';
 import 'account_manage_page.dart';

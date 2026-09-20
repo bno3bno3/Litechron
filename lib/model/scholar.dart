@@ -2,18 +2,18 @@ import 'dart:async';
 
 import 'package:get/get.dart';
 
-import 'package:celechron/page/option/option_controller.dart';
+import 'package:litechron/page/option/option_controller.dart';
 
 import 'period.dart';
 import 'grade.dart';
 import 'recommend_gpa_rule.dart';
 import 'semester.dart';
 import 'todo.dart';
-import 'package:celechron/utils/gpa_helper.dart';
-import 'package:celechron/http/spider.dart';
-import 'package:celechron/http/ugrs_spider.dart';
-import 'package:celechron/http/grs_spider.dart';
-import 'package:celechron/database/database_helper.dart';
+import 'package:litechron/utils/gpa_helper.dart';
+import 'package:litechron/http/spider.dart';
+import 'package:litechron/http/ugrs_spider.dart';
+import 'package:litechron/http/grs_spider.dart';
+import 'package:litechron/database/database_helper.dart';
 
 typedef SpiderFactory = Spider Function(String username, String password);
 

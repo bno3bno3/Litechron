@@ -1,7 +1,7 @@
 // Official packages
 import 'package:extended_sliver/extended_sliver.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:celechron/page/scholar/course_list/course_brief_card.dart';
+import 'package:litechron/page/scholar/course_list/course_brief_card.dart';
 import 'package:get/get.dart';
 
 import 'search_controller.dart';

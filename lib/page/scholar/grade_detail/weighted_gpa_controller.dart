@@ -1,9 +1,9 @@
-import 'package:celechron/database/database_helper.dart';
+import 'package:litechron/database/database_helper.dart';
 import 'package:get/get.dart';
-import 'package:celechron/model/grade.dart';
-import 'package:celechron/model/scholar.dart';
-import 'package:celechron/model/semester.dart';
-import 'package:celechron/page/option/option_controller.dart';
+import 'package:litechron/model/grade.dart';
+import 'package:litechron/model/scholar.dart';
+import 'package:litechron/model/semester.dart';
+import 'package:litechron/page/option/option_controller.dart';
 
 /// 单门课程权重控制器
 ///

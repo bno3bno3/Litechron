@@ -1,5 +1,5 @@
-import 'package:celechron/model/task.dart';
-import 'package:celechron/model/period.dart';
+import 'package:litechron/model/task.dart';
+import 'package:litechron/model/period.dart';
 
 class TimeAssignSet {
   bool isValid;

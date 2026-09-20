@@ -1,11 +1,11 @@
 import 'dart:io';
 
-import 'package:celechron/utils/platform_features.dart';
+import 'package:litechron/utils/platform_features.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'package:celechron/http/zjuServices/zjuam.dart';
-import 'package:celechron/http/zjuServices/ecard.dart';
+import 'package:litechron/http/zjuServices/zjuam.dart';
+import 'package:litechron/http/zjuServices/ecard.dart';
 
 import '../utils/utils.dart';
 

@@ -3,8 +3,8 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:celechron/http/zjuServices/zdbk.dart';
-import 'package:celechron/utils/global.dart';
+import 'package:litechron/http/zjuServices/zdbk.dart';
+import 'package:litechron/utils/global.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 

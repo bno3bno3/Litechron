@@ -1,14 +1,14 @@
 import 'dart:async';
 
-import 'package:celechron/database/database_helper.dart';
-import 'package:celechron/http/spider.dart';
-import 'package:celechron/model/grade.dart';
-import 'package:celechron/model/option.dart';
-import 'package:celechron/model/recommend_gpa_rule.dart';
-import 'package:celechron/model/scholar.dart';
-import 'package:celechron/model/semester.dart';
-import 'package:celechron/model/todo.dart';
-import 'package:celechron/page/option/option_controller.dart';
+import 'package:litechron/database/database_helper.dart';
+import 'package:litechron/http/spider.dart';
+import 'package:litechron/model/grade.dart';
+import 'package:litechron/model/option.dart';
+import 'package:litechron/model/recommend_gpa_rule.dart';
+import 'package:litechron/model/scholar.dart';
+import 'package:litechron/model/semester.dart';
+import 'package:litechron/model/todo.dart';
+import 'package:litechron/page/option/option_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 

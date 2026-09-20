@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:celechron/database/database_helper.dart';
-import 'package:celechron/http/zjuServices/exceptions.dart';
-import 'package:celechron/utils/tuple.dart';
-import 'package:celechron/model/session.dart';
-import 'package:celechron/model/exams_dto.dart';
-import 'package:celechron/model/exam.dart';
-import 'package:celechron/model/grade.dart';
+import 'package:litechron/database/database_helper.dart';
+import 'package:litechron/http/zjuServices/exceptions.dart';
+import 'package:litechron/utils/tuple.dart';
+import 'package:litechron/model/session.dart';
+import 'package:litechron/model/exams_dto.dart';
+import 'package:litechron/model/exam.dart';
+import 'package:litechron/model/grade.dart';
 import 'package:intl/intl.dart';
 import 'package:quiver/time.dart';
 

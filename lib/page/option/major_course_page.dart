@@ -1,11 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 
-import 'package:celechron/design/custom_colors.dart';
-import 'package:celechron/design/persistent_headers.dart';
-import 'package:celechron/design/round_rectangle_card.dart';
-import 'package:celechron/design/two_line_card.dart';
-import 'package:celechron/model/grade.dart';
+import 'package:litechron/design/custom_colors.dart';
+import 'package:litechron/design/persistent_headers.dart';
+import 'package:litechron/design/round_rectangle_card.dart';
+import 'package:litechron/design/two_line_card.dart';
+import 'package:litechron/model/grade.dart';
 import 'option_controller.dart';
 
 /// 主修课程挑选页
