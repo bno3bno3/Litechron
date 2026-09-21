@@ -31,6 +31,13 @@ class UgrsSpider implements Spider {
   bool _isPracticeScoresGet = false;
 
   Future<List<String?>>? _reloginFuture;
+  List<String?>? _lastLoginResult;
+  DateTime _lastLoginAt = DateTime(0);
+
+  /// 刚成功登录后的这段时间内再次 login() 直接复用结果。
+  /// 多路抓取先后失败会各自触发一次整套重登，后一次登录会顶掉前一次刚建好的
+  /// 教务网会话，持有旧会话的请求又触发重登……级联下去谁也刷不完。
+  static Duration loginReuseWindow = const Duration(seconds: 5);
   static const _retryableFetchErrors = <String>[
     "无法解析",
     "iplanetdirectorypro无效",
@@ -87,10 +94,19 @@ class UgrsSpider implements Spider {
     if (_reloginFuture != null) {
       return await _reloginFuture!;
     }
+    final last = _lastLoginResult;
+    if (last != null &&
+        last.every((e) => e == null) &&
+        DateTime.now().difference(_lastLoginAt) < loginReuseWindow) {
+      return last;
+    }
 
     _reloginFuture = _doLogin();
     try {
-      return await _reloginFuture!;
+      final result = await _reloginFuture!;
+      _lastLoginResult = result;
+      _lastLoginAt = DateTime.now();
+      return result;
     } finally {
       _reloginFuture = null;
     }
@@ -145,6 +161,7 @@ class UgrsSpider implements Spider {
     _password = "";
     _iPlanetDirectoryPro = null;
     _reloginFuture = null;
+    _lastLoginResult = null;
     try {
       _httpClient.close(force: true);
     } catch (_) {}

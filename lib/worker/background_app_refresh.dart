@@ -6,6 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../utils/utils.dart';
+import 'refresh_lock.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -74,7 +75,7 @@ Future<void> refreshScholar() async {
     ),
   );
 
-  var scholar = Scholar();
+  var scholar = Scholar()..runsInBackground = true;
   var secureStorage = const FlutterSecureStorage();
   scholar.username = await secureStorage.read(
       key: 'username', iOptions: secureStorageIOSOptions);
@@ -100,6 +101,11 @@ Future<void> refreshScholar() async {
       key: 'pushOnDdlReminder', iOptions: secureStorageIOSOptions);
   var notifiedDdlIdsStr = await secureStorage.read(
       key: 'notifiedDdlIds$ns', iOptions: secureStorageIOSOptions);
+
+  // 前台正在刷新时跳过本轮：后台此刻登录教务网会顶掉前台会话，
+  // 前台重登又顶回来，两边都刷不完。下一个周期再试即可。
+  if (await RefreshLock.isHeld(RefreshLock.foregroundKey)) return;
+  await RefreshLock.acquire(RefreshLock.backgroundKey);
 
   try {
     var error = await scholar.login();
@@ -179,5 +185,7 @@ Future<void> refreshScholar() async {
     }
   } catch (e) {
     return;
+  } finally {
+    await RefreshLock.release(RefreshLock.backgroundKey);
   }
 }

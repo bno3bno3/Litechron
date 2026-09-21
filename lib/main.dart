@@ -15,12 +15,14 @@ import 'package:litechron/model/option.dart';
 import 'package:litechron/page/home_page.dart';
 import 'package:litechron/page/option/ecard_pay_page.dart';
 import 'package:litechron/worker/ecard_widget_messenger.dart';
+import 'package:litechron/worker/refresh_lock.dart';
 import 'package:litechron/database/database_helper.dart';
 import 'package:litechron/utils/global.dart';
 
 void main() async {
   // 初始化数据库
   await Hive.initFlutter();
+  RefreshLock.enabled = true;
   var db = Get.put(DatabaseHelper(), tag: 'db');
   await db.init();
 

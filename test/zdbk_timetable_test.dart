@@ -9,8 +9,12 @@ import 'package:flutter_test/flutter_test.dart';
 // 2026-09 实测：教务网课表查询接口按会话限流，触发时返回
 // HTTP 921"请求过于频繁，请稍后再试！"；会话失效时返回 HTTP 901 空响应体。
 void main() {
+  setUp(() {
+    Zdbk.reloginBackoff = Duration.zero;
+  });
   tearDown(() {
     Zdbk.rateLimitBackoff = const Duration(milliseconds: 1200);
+    Zdbk.reloginBackoff = const Duration(milliseconds: 1500);
   });
 
   test('921限流时退避后原会话重试，成功后正常解析', () async {
@@ -71,6 +75,27 @@ void main() {
     expect(result.item2.toList(), hasLength(1));
     // 初始登录2次 + 课表901一次 + 自动重登2次 + 重试成功1次
     expect(client.requests, hasLength(6));
+  });
+
+  test('课表被反复顶掉：重登次数用尽后抛错，交给上层整套重登', () async {
+    final client = _ScriptedClient([
+      ..._loginResponses(),
+      for (var i = 0; i < Zdbk.timetableReloginAttempts; i++) ...[
+        _Response.text('', statusCode: 901),
+        if (i + 1 < Zdbk.timetableReloginAttempts) ..._loginResponses(),
+      ],
+    ]);
+    final zdbk = Zdbk();
+    await zdbk.login(client, Cookie('iPlanetDirectoryPro', 'test-sso'));
+
+    await expectLater(
+        zdbk.getTimetable(client, '2025-2026', '1|秋'),
+        throwsA(predicate(
+            (e) => e.toString() == '会话已过期且自动重登失败')));
+    expect(client.responses, isEmpty);
+    expect(
+        client.requests.where((r) => r.uri.path.endsWith('xskbcx_cxXsKb.html')),
+        hasLength(Zdbk.timetableReloginAttempts));
   });
 
   // 回归：以前 login() 一开始就把会话字段清空，登录期间并发的请求会在

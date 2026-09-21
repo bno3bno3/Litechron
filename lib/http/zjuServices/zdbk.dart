@@ -171,14 +171,27 @@ class Zdbk {
     await login(httpClient, iPlanetDirectoryPro);
   }
 
+  /// 一般接口的自动重登次数
+  static const defaultReloginAttempts = 3;
+
+  /// 课表是一条按学期串行的长链，暴露在“被别处登录顶掉”窗口里的时间最长，
+  /// 多给几次机会
+  static const timetableReloginAttempts = 5;
+
+  /// 第二次起每次重登前的退避基数：会话多半是被另一个进程（后台任务、
+  /// 并存的 Celechron、浏览器）的登录顶掉的，等一等让对方先跑完，
+  /// 立刻重登只会再把对方顶掉、然后再被顶回来。可在测试中置零。
+  static Duration reloginBackoff = const Duration(milliseconds: 1500);
+
   /// 用当前会话执行 [action]；会话失效时重登后重试。
   ///
   /// 会话在进入 action 前整套取出并传入，action 内不得再读字段。
   /// 失效时若发现会话已被并发的其他请求换成新的，直接用新会话重试，
   /// 不再重复登录（重复登录会让刚换好的会话又失效）。
   Future<T> _withAutoRelogin<T>(HttpClient httpClient,
-      Future<T> Function(List<Cookie> session) action) async {
-    for (var i = 0; i < 3; i++) {
+      Future<T> Function(List<Cookie> session) action,
+      {int attempts = defaultReloginAttempts}) async {
+    for (var i = 0; i < attempts; i++) {
       List<Cookie> session;
       try {
         session = _requireSession();
@@ -189,6 +202,11 @@ class Zdbk {
       try {
         return await action(session);
       } on SessionExpiredException {
+        if (i + 1 >= attempts) break;
+        if (i > 0 && reloginBackoff > Duration.zero) {
+          await Future.delayed(reloginBackoff * i);
+        }
+        // 退避期间可能已有并发请求换好了新会话，直接用新会话重试
         if (identical(_jSessionId, session[0])) {
           await _relogin(httpClient);
         }
@@ -321,7 +339,8 @@ class Zdbk {
   Future<Tuple<Exception?, Iterable<Session>>> getTimetable(
       HttpClient httpClient, String year, String semester,
       {bool allowUserInteraction = false}) async {
-    return await _withAutoRelogin(httpClient, (session) async {
+    return await _withAutoRelogin(httpClient, attempts: timetableReloginAttempts,
+        (session) async {
       late HttpClientRequest request;
       late HttpClientResponse response;
 

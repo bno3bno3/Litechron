@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:litechron/http/retry_helper.dart';
 import 'package:litechron/http/spider.dart';
+import 'package:litechron/http/ugrs_spider.dart' show UgrsSpider;
 import 'package:litechron/http/time_config_service.dart';
 import 'package:litechron/http/zjuServices/courses.dart';
 import 'package:litechron/http/zjuServices/grs_new.dart';
@@ -29,6 +30,8 @@ class GrsSpider implements Spider {
   Cookie? _iPlanetDirectoryPro;
   DateTime _lastUpdateTime = DateTime(0);
   Future<List<String?>>? _reloginFuture;
+  List<String?>? _lastLoginResult;
+  DateTime _lastLoginAt = DateTime(0);
   static const _retryableFetchErrors = <String>[
     "iplanetdirectorypro无效",
     "会话已过期",
@@ -84,10 +87,22 @@ class GrsSpider implements Spider {
     if (_reloginFuture != null) {
       return await _reloginFuture!;
     }
+    // 刚成功登录后短时间内的再次登录直接复用，避免多路抓取先后触发的
+    // 整套重登互相顶掉教务网会话（同 UgrsSpider.loginReuseWindow）
+    final last = _lastLoginResult;
+    if (last != null &&
+        last.every((e) => e == null) &&
+        DateTime.now().difference(_lastLoginAt) <
+            UgrsSpider.loginReuseWindow) {
+      return last;
+    }
 
     _reloginFuture = _doLogin();
     try {
-      return await _reloginFuture!;
+      final result = await _reloginFuture!;
+      _lastLoginResult = result;
+      _lastLoginAt = DateTime.now();
+      return result;
     } finally {
       _reloginFuture = null;
     }
@@ -145,6 +160,7 @@ class GrsSpider implements Spider {
     _password = "";
     _iPlanetDirectoryPro = null;
     _reloginFuture = null;
+    _lastLoginResult = null;
     try {
       _httpClient.close(force: true);
     } catch (_) {}

@@ -14,6 +14,7 @@ import 'package:litechron/http/spider.dart';
 import 'package:litechron/http/ugrs_spider.dart';
 import 'package:litechron/http/grs_spider.dart';
 import 'package:litechron/database/database_helper.dart';
+import 'package:litechron/worker/refresh_lock.dart';
 
 typedef SpiderFactory = Spider Function(String username, String password);
 
@@ -30,6 +31,9 @@ class Scholar {
 
   // 登录状态
   bool isLogan = false;
+
+  /// 运行在后台任务 isolate 中：不参与前台锁，互斥由后台入口自行处理
+  bool runsInBackground = false;
   DateTime lastUpdateTimeGrade = DateTime.parse("20010101");
   DateTime lastUpdateTimeCourse = DateTime.parse("20010101");
   DateTime lastUpdateTimeHomework = DateTime.parse("20010101");
@@ -212,6 +216,13 @@ class Scholar {
   }
 
   Future<void> _runRefresh(_ScholarRefreshTask task) async {
+    // 后台任务正在登录教务网时先等它结束，否则双方会互相顶掉会话。
+    // 前台是用户在等，最多等一小段时间，超时就照常刷新。
+    final useLock = RefreshLock.enabled && !runsInBackground;
+    if (useLock) {
+      await RefreshLock.waitUntilFree(RefreshLock.backgroundKey);
+      await RefreshLock.acquire(RefreshLock.foregroundKey);
+    }
     try {
       var errors = await _refreshOnce(task, userInitiated: task.startedByUser);
       // 手动下拉加入自动任务后，仅在自动任务失败时追加一轮完整刷新。
@@ -225,6 +236,9 @@ class Scholar {
     } catch (_) {
       task.completer.complete(['网络连接失败，请检查网络后重试']);
     } finally {
+      if (useLock) {
+        await RefreshLock.release(RefreshLock.foregroundKey);
+      }
       _refreshTask = null;
       task.partialUpdateListeners.clear();
       task.statusListeners.clear();
