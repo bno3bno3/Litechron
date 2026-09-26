@@ -152,14 +152,14 @@ class _HomePageState extends State<HomePage> {
     var fuse = Get.find<Rx<Fuse>>(tag: 'fuse');
     var response =
         await fuse.value.checkUpdate().whenComplete(() => fuse.refresh());
-    if (response != null) {
+    if (response == UpdateCheckResult.available) {
       if (!mounted) return;
       showCupertinoDialog(
           context: context,
           builder: (context) {
             return CupertinoAlertDialog(
               title: const Text('更新可用'),
-              content: Text(response),
+              content: const Text('有新版本可用'),
               actions: [
                 CupertinoDialogAction(
                   child: const Text('忽略'),

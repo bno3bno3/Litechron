@@ -467,6 +467,13 @@ class OptionPage extends StatelessWidget {
                       },
                     ),
                     CupertinoListTile(
+                      title: const Text('检查更新'),
+                      trailing: Obx(() => _optionController.checkingUpdate.value
+                          ? const CupertinoActivityIndicator()
+                          : const CupertinoListTileChevron()),
+                      onTap: () => _checkUpdate(context),
+                    ),
+                    CupertinoListTile(
                       title: const Text('服务条款'),
                       trailing: const BackChervonRow(),
                       onTap: () async {
@@ -510,6 +517,39 @@ class OptionPage extends StatelessWidget {
             )
           ],
         )));
+  }
+
+  Future<void> _checkUpdate(BuildContext context) async {
+    final result = await _optionController.checkUpdate();
+    if (result == null || !context.mounted) return;
+    final available = result == UpdateCheckResult.available;
+    final failed = result == UpdateCheckResult.failed;
+    await showCupertinoDialog<void>(
+      context: context,
+      builder: (dialogContext) => CupertinoAlertDialog(
+        title: Text(available ? '更新可用' : failed ? '检查失败' : '暂无更新'),
+        content: Text(available
+            ? '有新版本可用'
+            : failed
+                ? '暂时无法检查更新，请稍后重试。'
+                : '当前已经是最新版本'),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(available ? '稍后' : '好'),
+          ),
+          if (available)
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                launchUrlString(_optionController.downloadUrl,
+                    mode: LaunchMode.externalApplication);
+              },
+              child: const Text('前往下载'),
+            ),
+        ],
+      ),
+    );
   }
 
   void _showBrightnessPicker(BuildContext context) {

@@ -256,6 +256,19 @@ class OptionController extends GetxController {
 
   String get appVersion => _fuse.value.displayVersion;
 
+  final checkingUpdate = false.obs;
+
+  Future<UpdateCheckResult?> checkUpdate() async {
+    if (checkingUpdate.value) return null;
+    checkingUpdate.value = true;
+    try {
+      return await _fuse.value.checkUpdate(force: true);
+    } finally {
+      _fuse.refresh();
+      checkingUpdate.value = false;
+    }
+  }
+
   bool get hasNewVersion => _fuse.value.hasNewVersion;
 
   String get downloadUrl => _fuse.value.downloadUrl;
