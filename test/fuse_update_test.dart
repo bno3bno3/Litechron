@@ -95,7 +95,7 @@ void main() {
     expect(fuse.lastUpdateTime, successfulTime);
   });
 
-  test('invalid response fails without entering the 24 hour wait', () async {
+  test('invalid response fails without entering the 12 hour wait', () async {
     var response = <String, dynamic>{'version': '1.0', 'build': 3};
     final fuse = Fuse(fetchVersion: () async => response, save: (_) async {});
     final previousTime = fuse.lastUpdateTime;

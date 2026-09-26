@@ -57,7 +57,7 @@ class Fuse {
     }
     if (!force &&
         lastUpdateTime
-            .isAfter(DateTime.now().subtract(const Duration(days: 1)))) {
+            .isAfter(DateTime.now().subtract(const Duration(hours: 12)))) {
       return UpdateCheckResult.skipped;
     }
     _manualCheckRequested = force;
