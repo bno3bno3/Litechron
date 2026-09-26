@@ -1,7 +1,7 @@
 name: litechron
 description: Time scheduler for zjuers.
 publish_to: "none"
-version: 1.0.0+1
+version: 1.0.1+2
 environment:
   sdk: ">=3.0.0"
 
@@ -56,6 +56,7 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  default-flavor: production
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

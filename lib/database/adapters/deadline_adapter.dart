@@ -43,7 +43,7 @@ class DeadlineAdapter extends TypeAdapter<Task> {
   @override
   void write(BinaryWriter writer, Task obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(17)
       ..writeByte(0)
       ..write(obj.uid)
       ..writeByte(1)
@@ -75,7 +75,9 @@ class DeadlineAdapter extends TypeAdapter<Task> {
       ..writeByte(14)
       ..write(obj.blockArrangements)
       ..writeByte(15)
-      ..write(obj.fromUid);
+      ..write(obj.fromUid)
+      ..writeByte(16)
+      ..write(obj.repeatDates);
   }
 
   @override
@@ -104,6 +106,7 @@ class DeadlineAdapter extends TypeAdapter<Task> {
       ..repeatPeriod = fields[12] as int? ?? 1
       ..repeatEndsTime = fields[13] as DateTime? ?? (fields[5] as DateTime)
       ..blockArrangements = fields[14] as bool? ?? true
-      ..fromUid = fields[15] as String?;
+      ..fromUid = fields[15] as String?
+      ..repeatDates = (fields[16] as List?)?.cast<DateTime>() ?? [];
   }
 }

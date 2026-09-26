@@ -132,7 +132,10 @@ class _LitechronAppState extends State<LitechronApp>
   void _initAppLinks() {
     final appLinks = AppLinks();
     appLinks.uriLinkStream.listen((uri) {
-      if (uri.toString() == 'litechron://ecardpaypage') {
+      final scheme = Platform.isAndroid && appFlavor == 'development'
+          ? 'litechron-dev'
+          : 'litechron';
+      if (uri.toString() == '$scheme://ecardpaypage') {
         navigator?.popUntil((route) =>
             !(route.settings.name?.endsWith('ecardpaypage') ?? false));
         navigator?.pushNamed('/ecardpaypage');

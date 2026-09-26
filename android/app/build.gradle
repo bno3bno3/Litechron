@@ -61,6 +61,23 @@ android {
         versionName flutterVersionName
     }
 
+    // Keep the production ID stable; development installs alongside it.
+    flavorDimensions "environment"
+    productFlavors {
+        production {
+            dimension "environment"
+            manifestPlaceholders = [appLabel: "Litechron", appScheme: "litechron"]
+            resValue "string", "app_link_scheme", "litechron"
+        }
+        development {
+            dimension "environment"
+            applicationIdSuffix ".dev"
+            versionNameSuffix "-dev"
+            manifestPlaceholders = [appLabel: "Litechron 测试", appScheme: "litechron-dev"]
+            resValue "string", "app_link_scheme", "litechron-dev"
+        }
+    }
+
     signingConfigs {
         release {
             if (keystorePropertiesFile.exists()) {

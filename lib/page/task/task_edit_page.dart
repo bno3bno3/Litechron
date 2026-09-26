@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:litechron/model/task.dart';
 import 'package:litechron/utils/utils.dart';
 import 'package:litechron/utils/time_helper.dart';
+import 'package:litechron/page/task/task_dates_page.dart';
 
 class TaskEditPage extends StatefulWidget {
   final Task deadline;
@@ -15,14 +16,87 @@ class _TaskEditPageState extends State<TaskEditPage> {
   late Task now;
   int __got = 0;
 
+  bool get usesDates => now.repeatType == TaskRepeatType.dates;
+
+  DateTime get firstEditableDay {
+    final today = dateOnly(DateTime.now());
+    if (widget.deadline.repeatType == TaskRepeatType.dates &&
+        widget.deadline.startTime.isBefore(DateTime.now()) &&
+        widget.deadline.endTime.isAfter(DateTime.now())) {
+      return dateOnly(widget.deadline.startTime);
+    }
+    if (widget.deadline.repeatType == TaskRepeatType.dates &&
+        widget.deadline.repeatDates.any((day) => dateOnly(day) == today) &&
+        (dateOnly(widget.deadline.startTime).isAfter(today) ||
+            widget.deadline.endTime.isBefore(DateTime.now()))) {
+      return today.add(const Duration(days: 1));
+    }
+    return today;
+  }
+
+  void applyDates() {
+    now.repeatDates = now.repeatDates.map(dateOnly).toSet().toList()..sort();
+    final upcoming =
+        now.repeatDates.where((day) => !day.isBefore(firstEditableDay));
+    if (upcoming.isEmpty) return;
+    final duration = now.endTime.difference(now.startTime);
+    final day = upcoming.first;
+    now.startTime = DateTime(
+        day.year, day.month, day.day, now.startTime.hour, now.startTime.minute);
+    now.endTime = now.startTime.add(duration);
+    now.repeatEndsTime = now.repeatDates.last;
+    now.blockArrangements = false;
+  }
+
+  Future<void> selectDates() async {
+    final result = await Navigator.of(context).push<List<DateTime>>(
+      CupertinoPageRoute(
+          builder: (_) => TaskDatesPage(
+                dates: now.repeatDates,
+                firstEditableDay: firstEditableDay,
+                focusedDay: now.startTime,
+              )),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      now.repeatDates = result;
+      applyDates();
+    });
+  }
+
+  String clockText(DateTime time) =>
+      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+
+  void changeDateTime(DateTime value, {required bool start}) {
+    if (start) {
+      final duration = now.endTime.difference(now.startTime);
+      now.startTime = DateTime(now.startTime.year, now.startTime.month,
+          now.startTime.day, value.hour, value.minute);
+      now.endTime = now.startTime.add(duration);
+    } else {
+      now.endTime = DateTime(now.startTime.year, now.startTime.month,
+          now.startTime.day, value.hour, value.minute);
+      if (!now.endTime.isAfter(now.startTime)) {
+        now.endTime = now.endTime.add(const Duration(days: 1));
+      }
+    }
+  }
+
   void saveAndExit() {
+    if (now.type == TaskType.fixed && usesDates) {
+      applyDates();
+      if (!now.repeatDates.any((day) => !day.isBefore(firstEditableDay))) {
+        selectDates();
+        return;
+      }
+    }
     if (now.type == TaskType.fixed && !now.startTime.isBefore(now.endTime)) {
       showCupertinoDialog(
         context: context,
         builder: (BuildContext context) {
           return CupertinoAlertDialog(
             title: const Text(
-              '开始时间必须晚于结束时间',
+              '开始时间必须早于结束时间',
             ),
             actions: [
               CupertinoDialogAction(
@@ -68,7 +142,8 @@ class _TaskEditPageState extends State<TaskEditPage> {
       if ((now.repeatType == TaskRepeatType.days &&
               length > now.repeatPeriod * 24 * 60) ||
           (now.repeatType == TaskRepeatType.month && length > 28 * 24 * 60) ||
-          (now.repeatType == TaskRepeatType.year && length > 365 * 24 * 60)) {
+          (now.repeatType == TaskRepeatType.year && length > 365 * 24 * 60) ||
+          (usesDates && _selectedOccurrencesOverlap())) {
         showCupertinoDialog(
           context: context,
           builder: (BuildContext context) {
@@ -94,6 +169,17 @@ class _TaskEditPageState extends State<TaskEditPage> {
     FormState().save();
     now.forceRefreshStatus();
     Navigator.of(context).pop(now);
+  }
+
+  bool _selectedOccurrencesOverlap() {
+    final dates = now.repeatDates
+        .where((day) => !day.isBefore(firstEditableDay))
+        .toList();
+    final duration = now.endTime.difference(now.startTime);
+    for (var i = 1; i < dates.length; i++) {
+      if (dates[i].difference(dates[i - 1]) < duration) return true;
+    }
+    return false;
   }
 
   void removeAndExit() {
@@ -196,8 +282,9 @@ class _TaskEditPageState extends State<TaskEditPage> {
                         placeholder: '开始时间',
                         textAlign: TextAlign.left,
                         controller: TextEditingController(
-                            text:
-                                '开始于 ${TimeHelper.chineseDateTime(now.startTime)}'),
+                            text: usesDates
+                                ? '开始于 ${clockText(now.startTime)}'
+                                : '开始于 ${TimeHelper.chineseDateTime(now.startTime)}'),
                         readOnly: true,
                         onTap: () async {
                           await showCupertinoModalPopup(
@@ -214,10 +301,17 @@ class _TaskEditPageState extends State<TaskEditPage> {
                                       initialDateTime: now.startTime,
                                       use24hFormat: true,
                                       minuteInterval: 1,
-                                      mode: CupertinoDatePickerMode.dateAndTime,
+                                      mode: usesDates
+                                          ? CupertinoDatePickerMode.time
+                                          : CupertinoDatePickerMode.dateAndTime,
                                       onDateTimeChanged: (DateTime newTime) {
                                         setState(() {
-                                          now.startTime = newTime;
+                                          if (usesDates) {
+                                            changeDateTime(newTime,
+                                                start: true);
+                                          } else {
+                                            now.startTime = newTime;
+                                          }
                                         });
                                       },
                                     ),
@@ -235,8 +329,9 @@ class _TaskEditPageState extends State<TaskEditPage> {
                       placeholder: '结束时间',
                       textAlign: TextAlign.left,
                       controller: TextEditingController(
-                          text:
-                              '${now.type == TaskType.deadline ? '截止于' : '结束于'} ${TimeHelper.chineseDateTime(now.endTime)}'),
+                          text: usesDates && now.type == TaskType.fixed
+                              ? '结束于 ${dateOnly(now.endTime).difference(dateOnly(now.startTime)).inDays == 0 ? '' : '${dateOnly(now.endTime).difference(dateOnly(now.startTime)).inDays}天后 '}${clockText(now.endTime)}'
+                              : '${now.type == TaskType.deadline ? '截止于' : '结束于'} ${TimeHelper.chineseDateTime(now.endTime)}'),
                       readOnly: true,
                       onTap: () async {
                         await showCupertinoModalPopup(
@@ -253,10 +348,18 @@ class _TaskEditPageState extends State<TaskEditPage> {
                                     initialDateTime: now.endTime,
                                     use24hFormat: true,
                                     minuteInterval: 1,
-                                    mode: CupertinoDatePickerMode.dateAndTime,
+                                    mode: usesDates &&
+                                            now.type == TaskType.fixed
+                                        ? CupertinoDatePickerMode.time
+                                        : CupertinoDatePickerMode.dateAndTime,
                                     onDateTimeChanged: (DateTime newTime) {
                                       setState(() {
-                                        now.endTime = newTime;
+                                        if (usesDates &&
+                                            now.type == TaskType.fixed) {
+                                          changeDateTime(newTime, start: false);
+                                        } else {
+                                          now.endTime = newTime;
+                                        }
                                       });
                                     },
                                   ),
@@ -515,6 +618,18 @@ class _TaskEditPageState extends State<TaskEditPage> {
                                         setState(() {
                                           now.repeatType =
                                               TaskRepeatType.values[value];
+                                          if (usesDates) {
+                                            if (now.repeatDates.isEmpty) {
+                                              now.repeatDates = [
+                                                dateOnly(now.startTime)
+                                                        .isBefore(
+                                                            firstEditableDay)
+                                                    ? firstEditableDay
+                                                    : dateOnly(now.startTime)
+                                              ];
+                                            }
+                                            applyDates();
+                                          }
 
                                           if (now.repeatType !=
                                                   TaskRepeatType.norepeat &&
@@ -583,7 +698,14 @@ class _TaskEditPageState extends State<TaskEditPage> {
                                 });
                           },
                         ),
-                      if (now.repeatType != TaskRepeatType.norepeat)
+                      if (usesDates)
+                        CupertinoListTile(
+                          title: const Text('选择日期'),
+                          trailing: Text('已选 ${now.repeatDates.length} 天'),
+                          onTap: selectDates,
+                        ),
+                      if (now.repeatType != TaskRepeatType.norepeat &&
+                          !usesDates)
                         CupertinoListTile(
                           title: const Text('重复截止日期'),
                           trailing:
@@ -613,17 +735,18 @@ class _TaskEditPageState extends State<TaskEditPage> {
                                 });
                           },
                         ),
-                      CupertinoListTile(
-                        title: const Text('不在这个日程中安排任务'),
-                        trailing: CupertinoSwitch(
-                          value: now.blockArrangements,
-                          onChanged: (value) {
-                            setState(() {
-                              now.blockArrangements = !now.blockArrangements;
-                            });
-                          },
+                      if (!usesDates)
+                        CupertinoListTile(
+                          title: const Text('不在这个日程中安排任务'),
+                          trailing: CupertinoSwitch(
+                            value: now.blockArrangements,
+                            onChanged: (value) {
+                              setState(() {
+                                now.blockArrangements = !now.blockArrangements;
+                              });
+                            },
+                          ),
                         ),
-                      ),
                     ],
                   ),
                   // Container(

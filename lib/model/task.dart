@@ -13,7 +13,7 @@ enum TaskType {
 
 enum TaskStatus { running, suspended, completed, failed, deleted, outdated }
 
-enum TaskRepeatType { norepeat, days, month, year }
+enum TaskRepeatType { norepeat, days, month, year, dates }
 
 const Map<TaskType, String> deadlineTypeName = {
   TaskType.deadline: 'DDL',
@@ -35,6 +35,7 @@ const Map<TaskRepeatType, String> deadlineRepeatTypeName = {
   TaskRepeatType.days: '每隔几天',
   TaskRepeatType.month: '每月的这一天',
   TaskRepeatType.year: '每年的这一天',
+  TaskRepeatType.dates: '指定日期',
 };
 
 class DateTimePair {
@@ -98,6 +99,8 @@ class Task {
   bool blockArrangements;
   @HiveField(15)
   String? fromUid;
+  @HiveField(16)
+  List<DateTime> repeatDates;
 
   Task({
     this.uid = '114514',
@@ -116,7 +119,8 @@ class Task {
     required this.repeatEndsTime,
     this.blockArrangements = true,
     this.fromUid,
-  });
+    List<DateTime>? repeatDates,
+  }) : repeatDates = List.of(repeatDates ?? const <DateTime>[]);
 
   void reset() {
     genUid();
@@ -138,6 +142,7 @@ class Task {
     repeatEndsTime = DateTime(startTime.year, startTime.month, startTime.day);
     blockArrangements = true;
     fromUid = null;
+    repeatDates = [];
   }
 
   void copy(Task another) {
@@ -157,6 +162,7 @@ class Task {
     repeatEndsTime = another.repeatEndsTime;
     blockArrangements = another.blockArrangements;
     fromUid = another.fromUid;
+    repeatDates = List.of(another.repeatDates);
   }
 
   Task copyWith({
@@ -176,6 +182,7 @@ class Task {
     DateTime? repeatEndsTime,
     bool? blockArrangements,
     String? fromUid,
+    List<DateTime>? repeatDates,
   }) {
     return Task(
       uid: uid ?? this.uid,
@@ -194,6 +201,7 @@ class Task {
       repeatEndsTime: repeatEndsTime ?? this.repeatEndsTime,
       blockArrangements: blockArrangements ?? this.blockArrangements,
       fromUid: fromUid ?? this.fromUid,
+      repeatDates: repeatDates ?? this.repeatDates,
     );
   }
 
@@ -289,6 +297,16 @@ class Task {
     if (repeatType == TaskRepeatType.norepeat) {
       status = TaskStatus.outdated;
       return false;
+    } else if (repeatType == TaskRepeatType.dates) {
+      final dates = repeatDates.map(dateOnly).toSet().toList()..sort();
+      final next = dates.where((day) => day.isAfter(dateOnly(startTime)));
+      final target = next.isEmpty
+          ? dateOnly(repeatEndsTime).add(const Duration(days: 1))
+          : next.first;
+      final duration = endTime.difference(startTime);
+      startTime = DateTime(target.year, target.month, target.day,
+          startTime.hour, startTime.minute);
+      endTime = startTime.add(duration);
     } else if (repeatType == TaskRepeatType.days) {
       if (repeatPeriod < 1) {
         repeatPeriod = 1;
@@ -321,7 +339,8 @@ class Task {
   }
 
   Period? deadlineOfTime(DateTime refTime, {bool predicting = false}) {
-    if (type != TaskType.fixed) {
+    if (type != TaskType.fixed ||
+        (repeatType == TaskRepeatType.dates && status == TaskStatus.outdated)) {
       return null;
     }
 
@@ -434,6 +453,9 @@ class Task {
         repeatType != another.repeatType ||
         repeatPeriod != another.repeatPeriod ||
         repeatEndsTime != another.repeatEndsTime ||
+        repeatDates.length != another.repeatDates.length ||
+        !repeatDates.every(another.repeatDates.contains) ||
+        (type == TaskType.fixed && startTime != another.startTime) ||
         (type == TaskType.fixed &&
             blockArrangements != another.blockArrangements)) {
       return true;
