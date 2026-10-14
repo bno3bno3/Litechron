@@ -6,6 +6,8 @@ environment:
   sdk: ">=3.0.0"
 
 dependencies:
+  academic_auth_gate:
+    path: packages/academic_auth_gate
   flutter:
     sdk: flutter
   flutter_localizations:

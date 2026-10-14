@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../utils/utils.dart';
@@ -19,6 +23,27 @@ class RefreshLock {
 
   /// 只有真正运行在设备上时才启用；测试环境没有平台通道，且期望刷新同步启动
   static bool enabled = false;
+
+  static final _academicZone = Object();
+  static const _gate = MethodChannel('io.github.bno3bno3.litechron/authGate');
+
+  /// Android native e-card authentication and every Flutter engine share admission.
+  /// Zone reentrancy lets a refresh call login without acquiring its own lease twice.
+  static Future<T> withAcademic<T>(Future<T> Function() action,
+      {bool background = false}) async {
+    if (!Platform.isAndroid ||
+        (!enabled && !background) ||
+        Zone.current[_academicZone] == true) {
+      return action();
+    }
+    final token = await _gate.invokeMethod<String>('acquire');
+    if (token == null) throw PlatformException(code: 'busy', message: '请稍后重试');
+    try {
+      return await runZoned(action, zoneValues: {_academicZone: true});
+    } finally {
+      await _gate.invokeMethod<void>('release', token);
+    }
+  }
 
   /// 超过这个时间的锁视为持有者已经异常退出，不再等待
   static Duration staleAfter = const Duration(minutes: 3);
@@ -47,8 +72,8 @@ class RefreshLock {
           await _storage.read(key: key, iOptions: secureStorageIOSOptions);
       final since = int.tryParse(raw ?? '');
       if (since == null) return false;
-      final age = DateTime.now()
-          .difference(DateTime.fromMillisecondsSinceEpoch(since));
+      final age =
+          DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(since));
       return age >= Duration.zero && age < staleAfter;
     } catch (_) {
       return false;

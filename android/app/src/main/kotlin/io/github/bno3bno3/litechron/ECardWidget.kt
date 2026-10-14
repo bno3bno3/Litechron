@@ -3,11 +3,16 @@ package io.github.bno3bno3.litechron
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.appwidget.AppWidgetManager
+import androidx.datastore.preferences.core.Preferences
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.*
 import androidx.glance.action.clickable
+import androidx.glance.action.ActionParameters
+import androidx.glance.appwidget.action.ActionCallback
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.cornerRadius
@@ -19,53 +24,73 @@ import androidx.glance.text.FontFamily
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import com.it_nomads.fluttersecurestorage.FlutterSecureStorage
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.*
-import kotlinx.serialization.json.*
-import java.net.HttpURLConnection
-import java.net.URL
-import java.time.LocalTime
+import io.github.bno3bno3.litechron.ecard.ECardRuntime
+import io.github.bno3bno3.litechron.ecard.ECardState
+import java.time.Instant
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class ECardWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ECardWidget()
+
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        // Own the broadcast completion; super.onUpdate also calls goAsync().
+        val pending = goAsync()
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try {
+                withTimeout(8_000) {
+                    val runtime = ECardRuntime.get(context)
+                    runtime.enqueue()
+                    runtime.publish()
+                }
+            } catch (_: Exception) {
+                // The durable worker owns retries and the persisted failure state.
+            } finally { pending.finish() }
+        }
+    }
+}
+
+class RefreshECardAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        withContext(Dispatchers.IO) { ECardRuntime.get(context).enqueue() }
+    }
 }
 
 class ECardWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
 
-        var balance: Int
-        try {
-            val storage = FlutterSecureStorage(context, HashMap())
-            val values = storage.readAll()
-            balance = fetchBalance(values["synjonesAuth"])
-        } catch (e: Exception) {
-            balance = -1
-        }
-
         provideContent {
             GlanceTheme {
-                content(context, id, balance)
+                val state = currentState<Preferences>()
+                val status = state[ECardState.status] ?: "pending"
+                val updated = state[ECardState.updated]?.let {
+                    Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
+                }
+                val message = when (status) {
+                    "refreshing" -> "刷新中"
+                    "loggedOut" -> "请先登录"
+                    "failed" -> "刷新失败" + (updated?.let { " · $it" } ?: "")
+                    "success" -> "更新时间：${updated.orEmpty()}"
+                    else -> "待刷新"
+                }
+                val empty = when {
+                    status == "loggedOut" -> "请先登录"
+                    state[ECardState.failure] == "NO_CARD" -> "未找到校园卡"
+                    state[ECardState.failure] == "AUTH" -> "认证失败"
+                    state[ECardState.failure] == "FORMAT" -> "响应异常"
+                    else -> "待刷新"
+                }
+                content(context, id, state[ECardState.balance], message, empty)
             }
         }
     }
 
     @Composable
-    private fun content(context: Context?, id: GlanceId?, balance: Int) {
+    private fun content(context: Context?, id: GlanceId?, balance: Long?, message: String = "待刷新", empty: String = "待刷新") {
         Column(
-            modifier = GlanceModifier.background(GlanceTheme.colors.background).fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp).cornerRadius(16.dp).clickable{
-                context?.let {
-                    val scheme = it.getString(R.string.app_link_scheme)
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("$scheme://ecardpaypage"))
-                    intent.setPackage(it.packageName)
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    it.startActivity(intent)
-                }
-            },
+            modifier = GlanceModifier.background(GlanceTheme.colors.background).fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp).cornerRadius(16.dp).clickable(actionRunCallback<RefreshECardAction>()),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(modifier = GlanceModifier.fillMaxWidth()) {
@@ -91,11 +116,7 @@ class ECardWidget : GlanceAppWidget() {
                         resId = R.drawable.sync_24px
                     ),
                     contentDescription = "Sync Icon",
-                    modifier = GlanceModifier.size(20.dp).clickable {
-                        CoroutineScope(Dispatchers.Main).launch {
-                            update(context!!, id!!)
-                        }
-                    },
+                    modifier = GlanceModifier.size(20.dp).clickable(actionRunCallback<RefreshECardAction>()),
                     colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground)
                 )
             }
@@ -103,7 +124,7 @@ class ECardWidget : GlanceAppWidget() {
             Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
                 Column {
                     Text(
-                        text = formatBalance(balance),
+                        text = balance?.let(::formatBalance) ?: empty,
                         maxLines = 1,
                         style = TextStyle(
                             color = GlanceTheme.colors.primary,
@@ -113,7 +134,7 @@ class ECardWidget : GlanceAppWidget() {
                         )
                     )
                     Text(
-                        text = "更新时间：${LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))}",
+                        text = message,
                         maxLines = 1,
                         style = TextStyle(
                             color = GlanceTheme.colors.onBackground,
@@ -130,7 +151,15 @@ class ECardWidget : GlanceAppWidget() {
                             resId = R.drawable.qr_code_24px
                         ),
                         contentDescription = "QR Code Icon",
-                        modifier = GlanceModifier.size(32.dp),
+                        modifier = GlanceModifier.size(32.dp).clickable {
+                            context?.let {
+                                val scheme = it.getString(R.string.app_link_scheme)
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("$scheme://ecardpaypage"))
+                                intent.setPackage(it.packageName)
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                it.startActivity(intent)
+                            }
+                        },
                         colorFilter = ColorFilter.tint(GlanceTheme.colors.primary)
                     )
                 }
@@ -147,7 +176,7 @@ class ECardWidget : GlanceAppWidget() {
         content(null, null, 1897)
     }
 
-    private fun formatBalance(balance: Int): String {
+    private fun formatBalance(balance: Long): String {
         // Variable balance is 100 times larger than the actual value
         // For example, if the actual balance is ¥18.97, then variable balance is 18.97 * 100 = 1897
         // If variable balance is less than 10000, display it directly. For example, 1897 -> ¥ 18.97
@@ -163,21 +192,4 @@ class ECardWidget : GlanceAppWidget() {
         }
     }
 
-    private fun fetchBalance(synjonesAuth: String?): Int = runBlocking {
-        val url = URL("https://elife.zju.edu.cn/berserker-app/ykt/tsm/getCampusCards")
-        async(Dispatchers.IO) {
-            with(url.openConnection() as HttpURLConnection) {
-                requestMethod = "GET"
-                setRequestProperty("Synjones-Auth", "Bearer $synjonesAuth")
-                setRequestProperty(
-                    "User-Agent",
-                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0"
-                )
-                val response = inputStream.bufferedReader().readText()
-                val json = Json.parseToJsonElement(response)
-                val cardList = json.jsonObject["data"]!!.jsonObject["card"]!!.jsonArray
-                return@async cardList.maxOf { it.jsonObject["db_balance"]!!.jsonPrimitive.int }
-            }
-        }.await()
-    }
 }

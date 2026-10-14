@@ -2,9 +2,15 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'exceptions.dart';
+import '../../worker/refresh_lock.dart';
 
 class ZjuAm {
   static Future<Cookie?> getSsoCookie(
+          HttpClient httpClient, String username, String password) =>
+      RefreshLock.withAcademic(
+          () => _getSsoCookie(httpClient, username, password));
+
+  static Future<Cookie?> _getSsoCookie(
       HttpClient httpClient, String username, String password) async {
     late HttpClientRequest request;
     late HttpClientResponse response;

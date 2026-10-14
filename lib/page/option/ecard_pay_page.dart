@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:get/get.dart';
@@ -10,10 +11,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:litechron/design/persistent_headers.dart';
 import '../../http/zjuServices/ecard.dart';
 import '../../utils/utils.dart';
+import 'android_ecard_pay_page.dart';
 
 class ECardPayPage extends StatelessWidget {
   ECardPayPage({super.key});
-
   final _httpClient = HttpClient();
 
   Future<String?> _requestNewCode() async {
@@ -43,6 +44,9 @@ class ECardPayPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return const AndroidECardPayPage();
+    }
     _requestNewCode().then((code) {
       if (code == null) {
         _requestNewCode().then((code) {
