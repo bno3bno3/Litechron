@@ -138,7 +138,7 @@ class Scholar {
       return ["未登录"];
     }
     _spider = _spiderFactory(username!, password!);
-    var loginErrorMessage = await _spider!.login();
+    var loginErrorMessage = await RefreshLock.withAcademic(() => _spider!.login());
     if (loginErrorMessage.every((e) => e == null)) {
       isLogan = true;
       _db?.setScholar(this);
@@ -224,13 +224,15 @@ class Scholar {
       await RefreshLock.acquire(RefreshLock.foregroundKey);
     }
     try {
-      var errors = await _refreshOnce(task, userInitiated: task.startedByUser);
+      var errors = await RefreshLock.withAcademic(
+          () => _refreshOnce(task, userInitiated: task.startedByUser));
       // 手动下拉加入自动任务后，仅在自动任务失败时追加一轮完整刷新。
       // 不循环重试，补刷期间再加入的调用也只等待这一轮。
       if (!task.startedByUser &&
           task.manualRefreshRequested &&
           errors.any((e) => e != null)) {
-        errors = await _refreshOnce(task, userInitiated: true);
+        errors = await RefreshLock.withAcademic(
+            () => _refreshOnce(task, userInitiated: true));
       }
       task.completer.complete(errors);
     } catch (_) {

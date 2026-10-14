@@ -23,6 +23,14 @@ void callbackDispatcher() {
 }
 
 Future<void> refreshScholar() async {
+  try {
+    await RefreshLock.withAcademic(_refreshScholar, background: true);
+  } catch (_) {
+    // Another engine or e-card authentication is busy; try the next scheduled round.
+  }
+}
+
+Future<void> _refreshScholar() async {
   FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
   const initializationSettingsAndroid =

@@ -298,7 +298,11 @@ class OptionController extends GetxController {
     try {
       await _switchAccountLocked(username);
     } finally {
-      accountBusy.value = false;
+      try {
+        await ECardWidgetMessenger.credentialsCommitted();
+      } finally {
+        accountBusy.value = false;
+      }
     }
   }
 
@@ -306,6 +310,7 @@ class OptionController extends GetxController {
     var target = accounts.firstWhereOrNull((e) => e['username'] == username);
     if (target == null || username == scholar.value.username) return;
 
+    await ECardWidgetMessenger.invalidateSession();
     var writes = <Future>[];
     var next = _activateProfile(target, writes);
     accounts.remove(target);
@@ -315,6 +320,7 @@ class OptionController extends GetxController {
     // 目标账号的归档键等提交完成后再删，中途被杀不丢档案
     await Future.wait(writes);
     await _db.setAccountList(accounts.toList());
+    await ECardWidgetMessenger.credentialsCommitted();
     await _db.deleteArchivedProfile(username);
     await _db.removeAllCachedWebPage();
     if (Get.isRegistered<ScholarController>()) {
@@ -342,6 +348,7 @@ class OptionController extends GetxController {
       var index = accounts.indexWhere((e) => e['username'] == username);
 
       if (username == scholar.value.username) {
+        await ECardWidgetMessenger.invalidateSession();
         // 当前账号改密码：换上新凭据。旧 spider 缓存着旧密码，而 refresh
         // 只在无会话时才内部重登，须显式 login 重建会话后再刷新
         scholar.value.password = password;
@@ -352,6 +359,7 @@ class OptionController extends GetxController {
         }
         await _db.setScholar(scholar.value);
         await _db.setAccountList(accounts.toList());
+        await ECardWidgetMessenger.credentialsCommitted();
         var s = scholar.value;
         unawaited(() async {
           try {
@@ -371,17 +379,18 @@ class OptionController extends GetxController {
       if (index >= 0) {
         // 已存账号：原位更新密码（位次交给切换流程调整），随后切换过去
         accounts[index] = entry;
-        await _db.setAccountList(accounts.toList());
         await _switchAccountLocked(username);
         return errors;
       }
 
       // 新账号：归档当前账号（若有），probe 转正为活动 Scholar
+      await ECardWidgetMessenger.invalidateSession();
       var writes = <Future>[];
       _adoptNewAccount(probe, writes);
       accounts.insert(0, entry);
       await Future.wait(writes);
       await _db.setAccountList(accounts.toList());
+      await ECardWidgetMessenger.credentialsCommitted();
       await _db.removeAllCachedWebPage();
       if (Get.isRegistered<ScholarController>()) {
         Get.find<ScholarController>().resetSemesterIndex();
@@ -391,7 +400,11 @@ class OptionController extends GetxController {
       _refreshInBackground(probe);
       return errors;
     } finally {
-      accountBusy.value = false;
+      try {
+        await ECardWidgetMessenger.credentialsCommitted();
+      } finally {
+        accountBusy.value = false;
+      }
     }
   }
 
@@ -401,6 +414,7 @@ class OptionController extends GetxController {
     if (accountBusy.value) return;
     accountBusy.value = true;
     try {
+      await ECardWidgetMessenger.invalidateSession();
       var old = scholar.value;
       var oldUsername = old.username;
       accounts.removeWhere((e) => e['username'] == oldUsername);
@@ -411,6 +425,7 @@ class OptionController extends GetxController {
         var next = _activateProfile(target, writes, archiveCurrent: false);
         await Future.wait(writes);
         await _db.setAccountList(accounts.toList());
+        await ECardWidgetMessenger.credentialsCommitted();
         await _db.deleteArchivedProfile(target['username']!);
         if (oldUsername != null && oldUsername.isNotEmpty) {
           await _db.deleteArchivedProfile(oldUsername); // 常态不存在，防残档
@@ -456,9 +471,13 @@ class OptionController extends GetxController {
       await _db.removeAllCachedWebPage();
       scholar.refresh();
       pushOnGradeChange = false;
-      ECardWidgetMessenger.logout();
+      await ECardWidgetMessenger.logout();
     } finally {
-      accountBusy.value = false;
+      try {
+        await ECardWidgetMessenger.credentialsCommitted();
+      } finally {
+        accountBusy.value = false;
+      }
     }
   }
 

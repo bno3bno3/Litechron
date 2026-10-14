@@ -1,15 +1,15 @@
 package io.github.bno3bno3.litechron
 
 import android.os.Bundle
-import androidx.glance.appwidget.updateAll
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import io.github.bno3bno3.litechron.ecard.*
+import kotlinx.coroutines.*
 
-class MainActivity: FlutterActivity() {
+class MainActivity : FlutterActivity() {
+    private val channelScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var ecardChannel: MethodChannel? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.statusBarColor = 0
@@ -17,11 +17,33 @@ class MainActivity: FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "io.github.bno3bno3.litechron/ecardWidget").setMethodCallHandler {
-                call, result ->
-            CoroutineScope(Dispatchers.Main).launch {
-                ECardWidget().updateAll(this@MainActivity)
+        ecardChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "io.github.bno3bno3.litechron/ecardWidget")
+        ecardChannel!!.setMethodCallHandler(ECardMethodHandler(channelScope) { method, result ->
+            val runtime = withContext(Dispatchers.IO) { ECardRuntime.get(applicationContext) }
+            if (method == "getBarcode") {
+                val (credentials, barcode) = withContext(Dispatchers.IO) {
+                    val credentials = runtime.credentials()
+                    credentials to runtime.service.barcode(credentials)
+                }
+                runtime.deliver(credentials) { result.success(barcode) }
+            } else {
+                val response = withContext(Dispatchers.IO) {
+                    when (method) {
+                        "update" -> runtime.enqueue()
+                        "logout" -> { runtime.invalidate(logout = true); null }
+                        "invalidateSession" -> { runtime.invalidate(); null }
+                        "credentialsCommitted" -> { runtime.credentialsCommitted(); null }
+                        else -> null
+                    }
+                }
+                result.success(response)
             }
-        }
+        })
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        ecardChannel?.setMethodCallHandler(null)
+        channelScope.cancel()
+        super.cleanUpFlutterEngine(flutterEngine)
     }
 }

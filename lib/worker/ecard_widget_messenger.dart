@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:litechron/utils/platform_features.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:litechron/http/zjuServices/zjuam.dart';
@@ -10,7 +11,37 @@ import 'package:litechron/http/zjuServices/ecard.dart';
 import '../utils/utils.dart';
 
 class ECardWidgetMessenger {
+  static final accountGeneration = ValueNotifier<int>(0);
+  static const platform =
+      MethodChannel('io.github.bno3bno3.litechron/ecardWidget');
+
+  static Future<void> invalidateSession() async {
+    if (Platform.isAndroid) {
+      accountGeneration.value++;
+      await platform.invokeMethod<void>('invalidateSession');
+    }
+  }
+
+  static Future<void> credentialsCommitted() async {
+    if (Platform.isAndroid) {
+      await platform.invokeMethod<void>('credentialsCommitted');
+    }
+  }
+
+  static Future<String> getBarcode() async {
+    final generation = accountGeneration.value;
+    final result = await platform.invokeMethod<String>('getBarcode') ?? '';
+    if (generation != accountGeneration.value) {
+      throw PlatformException(code: 'stale', message: '账号已切换，请重新打开付款码');
+    }
+    return result;
+  }
+
   static Future<void> update() async {
+    if (Platform.isAndroid) {
+      await platform.invokeMethod<bool>('update');
+      return;
+    }
     var secureStorage = const FlutterSecureStorage();
     var username = await secureStorage.read(
         key: 'username', iOptions: secureStorageIOSOptions);
@@ -30,7 +61,8 @@ class ECardWidgetMessenger {
           iOptions: secureStorageIOSOptions);
 
       if (Platform.isIOS || Platform.isAndroid) {
-        const platform = MethodChannel('io.github.bno3bno3.litechron/ecardWidget');
+        const platform =
+            MethodChannel('io.github.bno3bno3.litechron/ecardWidget');
         await platform.invokeMethod('update');
       }
     }
@@ -56,7 +88,8 @@ class ECardWidgetMessenger {
           iOptions: secureStorageIOSOptions);
 
       if (PlatformFeatures.hasWidgetSupport) {
-        const platform = MethodChannel('io.github.bno3bno3.litechron/ecardWidget');
+        const platform =
+            MethodChannel('io.github.bno3bno3.litechron/ecardWidget');
         await platform.invokeMethod('update');
       }
     } catch (e) {
@@ -65,12 +98,18 @@ class ECardWidgetMessenger {
   }
 
   static Future<void> logout() async {
+    if (Platform.isAndroid) {
+      accountGeneration.value++;
+      await platform.invokeMethod<void>('logout');
+      return;
+    }
     var secureStorage = const FlutterSecureStorage();
     await secureStorage.delete(
         key: 'synjonesAuth', iOptions: secureStorageIOSOptions);
 
     if (PlatformFeatures.hasWidgetSupport) {
-      const platform = MethodChannel('io.github.bno3bno3.litechron/ecardWidget');
+      const platform =
+          MethodChannel('io.github.bno3bno3.litechron/ecardWidget');
       await platform.invokeMethod('logout');
     }
   }
