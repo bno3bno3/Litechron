@@ -99,15 +99,8 @@ class _TodoListPageState extends State<TodoListPage> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('共 ${items.length} 项 · 按截止时间排序',
-                          style: _secondaryText(context)),
-                      const SizedBox(height: 4),
-                      Text(_filter.scope, style: _secondaryText(context)),
-                    ],
-                  ),
+                  child: Text('共 ${items.length} 项',
+                      style: _secondaryText(context)),
                 ),
               ),
               if (items.isEmpty)

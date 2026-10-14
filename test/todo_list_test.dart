@@ -118,7 +118,7 @@ void main() {
       expect(
           tester.widget<TodoListPage>(find.byType(TodoListPage)).initialFilter,
           filter);
-      expect(find.text('共 $count 项 · 按截止时间排序'), findsOneWidget);
+      expect(find.text('共 $count 项'), findsOneWidget);
       final selected = tester.widget<AnimateButton>(find.ancestor(
           of: find.text(filter.label), matching: find.byType(AnimateButton)));
       final semantics = tester.widget<Semantics>(find
@@ -132,7 +132,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       await tester.pump();
       final updatedCount = fixture.controller.todosFor(filter).length;
-      expect(find.text('共 $updatedCount 项 · 按截止时间排序'), findsOneWidget);
+      expect(find.text('共 $updatedCount 项'), findsOneWidget);
       expect(ModalRoute.of(tester.element(find.byType(TodoListPage))),
           isA<CupertinoPageRoute<void>>());
       await tester.tap(find.byIcon(CupertinoIcons.back));
@@ -167,7 +167,7 @@ void main() {
     Get.find<Rx<Scholar>>(tag: 'scholar').refresh();
     await tester.pumpAndSettle();
     expect(find.text('新获取的作业'), findsOneWidget);
-    expect(find.text('共 1 项 · 按截止时间排序'), findsOneWidget);
+    expect(find.text('共 1 项'), findsOneWidget);
 
     final next = TodoFixture();
     next.scholar.todos = [todoSample('另一个账号的作业', fixture.now)];
@@ -204,7 +204,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('即将截止'), findsOneWidget);
     expect(find.textContaining(' · 已截止'), findsOneWidget);
-    expect(find.text('共 1 项 · 按截止时间排序'), findsOneWidget);
+    expect(find.text('共 1 项'), findsOneWidget);
     await close(tester);
   });
 
@@ -234,7 +234,7 @@ void main() {
       await tester.tap(find.text(filter.label));
       await tester.pumpAndSettle();
       expect(find.text(filter.emptyMessage), findsOneWidget);
-      expect(find.text('共 0 项 · 按截止时间排序'), findsOneWidget);
+      expect(find.text('共 0 项'), findsOneWidget);
     }
     fixture.expectNoRequests();
     await close(tester);
