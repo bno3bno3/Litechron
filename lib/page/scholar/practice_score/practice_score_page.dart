@@ -139,19 +139,29 @@ class _PracticeScorePageState extends State<PracticeScorePage> {
                         .textTheme
                         .textStyle
                         .copyWith(fontSize: 16, fontWeight: FontWeight.bold))),
-            const SizedBox(width: 12),
+            const SizedBox(width: 20),
             Text(_score(item),
                 style: CupertinoTheme.of(context)
                     .textTheme
                     .textStyle
-                    .copyWith(fontSize: 16, fontWeight: FontWeight.bold)),
+                    .copyWith(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(width: 4),
             const Icon(CupertinoIcons.chevron_right,
                 size: 14, color: CupertinoColors.tertiaryLabel),
           ]),
           const SizedBox(height: 6),
-          Text(
-              '${item.statusLabel} · ${_date(item.activityStart ?? item.updatedAt)}',
+          Text.rich(
+              TextSpan(children: [
+                TextSpan(
+                    text: item.statusLabel,
+                    style: item.approved
+                        ? TextStyle(
+                            color: CupertinoDynamicColor.resolve(
+                                CupertinoColors.systemGreen, context))
+                        : null),
+                TextSpan(
+                    text: ' · ${_date(item.activityStart ?? item.updatedAt)}'),
+              ]),
               style: _secondaryText(context)),
           const SizedBox(height: 4),
           Text('${item.projectType} · ${item.qualityType}',
@@ -277,8 +287,14 @@ class PracticeScoreDetailPage extends StatelessWidget {
                           style: _secondaryText(context, fontSize: 13)),
                       const SizedBox(height: 4),
                       Text(rows[i].$2,
-                          style:
-                              CupertinoTheme.of(context).textTheme.textStyle),
+                          style: CupertinoTheme.of(context)
+                              .textTheme
+                              .textStyle
+                              .copyWith(
+                                  color: rows[i].$1 == '审核状态' && item.approved
+                                      ? CupertinoDynamicColor.resolve(
+                                          CupertinoColors.systemGreen, context)
+                                      : null)),
                     ],
                   ])),
         )),
