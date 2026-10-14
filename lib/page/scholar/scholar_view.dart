@@ -21,6 +21,7 @@ import 'course_list/course_list_view.dart';
 import 'course_schedule/course_schedule_view.dart';
 import 'exam_list/exam_list_view.dart';
 import 'grade_detail/grade_detail_view.dart';
+import 'practice_score/practice_score_page.dart';
 import 'scholar_controller.dart';
 import 'package:litechron/page/option/option_controller.dart';
 
@@ -716,7 +717,18 @@ class ScholarPage extends StatelessWidget {
                                             fontWeight: FontWeight.bold))),
                               ],
                               titles: const ["二课分", "三课分", "四课分"],
-                              onTaps: [() {}, () {}, () {}],
+                              onTaps: [
+                                for (var category = 1;
+                                    category <= 3;
+                                    category++)
+                                  () =>
+                                      Navigator.of(context, rootNavigator: true)
+                                          .push(CupertinoPageRoute<void>(
+                                        builder: (_) => PracticeScorePage(
+                                            initialCategory: category),
+                                        title: '实践明细',
+                                      )),
+                              ],
                             ),
                             const SizedBox(height: 16),
                           ],

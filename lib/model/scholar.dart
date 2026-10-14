@@ -9,6 +9,8 @@ import 'grade.dart';
 import 'recommend_gpa_rule.dart';
 import 'semester.dart';
 import 'todo.dart';
+import 'practice_details.dart';
+import 'package:litechron/http/zjuServices/sztz.dart';
 import 'package:litechron/utils/gpa_helper.dart';
 import 'package:litechron/http/spider.dart';
 import 'package:litechron/http/ugrs_spider.dart';
@@ -42,6 +44,7 @@ class Scholar {
   String? username;
   String? password;
   Spider? _spider;
+  UgrsSpider? _practiceDetailsSpider;
   final SpiderFactory _spiderFactory;
 
   static Spider _createSpider(String username, String password) {
@@ -96,6 +99,26 @@ class Scholar {
   double pt4 = 0.0; // 四课分
   bool isPracticeScoresGet = false; // 是否成功获取到二三四课堂分数
 
+  PracticeDetails get cachedPracticeDetails =>
+      Sztz.readCache(_db, username ?? '');
+
+  Future<PracticeDetails> getPracticeDetails() async {
+    final account = username;
+    if (account == null || account.isEmpty || password == null || !isLogan) {
+      return cachedPracticeDetails.withError('素质拓展登录失败：请先登录账号');
+    }
+    final spider = _spider ??= _spiderFactory(account, password!);
+    spider.db = _db;
+    if (spider is UgrsSpider) {
+      if (!identical(_practiceDetailsSpider, spider)) {
+        _practiceDetailsSpider?.clearPracticeDetailsSession();
+        _practiceDetailsSpider = spider;
+      }
+      return spider.getPracticeDetails();
+    }
+    return cachedPracticeDetails.withError('实践明细获取失败：当前账号不支持查询');
+  }
+
   int get gradedCourseCount {
     return grades.values.fold(0, (p, e) => p + e.length);
   }
@@ -147,6 +170,8 @@ class Scholar {
   }
 
   Future<bool> logout() async {
+    _practiceDetailsSpider?.clearPracticeDetailsSession();
+    _practiceDetailsSpider = null;
     username = "";
     password = "";
     semesters = [];

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:litechron/http/retry_helper.dart';
 import 'package:litechron/http/zjuServices/courses.dart';
 import 'package:litechron/model/todo.dart';
+import 'package:litechron/model/practice_details.dart';
 import 'package:get/get.dart';
 
 import 'package:litechron/http/spider.dart';
@@ -15,6 +16,7 @@ import 'package:litechron/model/semester.dart';
 
 import 'zjuServices/zjuam.dart';
 import 'zjuServices/zdbk.dart';
+import 'zjuServices/sztz.dart';
 
 class UgrsSpider implements Spider {
   late HttpClient _httpClient; // HTTP 客户端
@@ -29,6 +31,8 @@ class UgrsSpider implements Spider {
   bool fetchGrs = false;
   Map<String, double>? _practiceScores;
   bool _isPracticeScoresGet = false;
+  DatabaseHelper? _db;
+  Sztz? _practiceDetails;
 
   Future<List<String?>>? _reloginFuture;
   List<String?>? _lastLoginResult;
@@ -83,6 +87,8 @@ class UgrsSpider implements Spider {
 
   @override
   set db(DatabaseHelper? db) {
+    _db = db;
+    _practiceDetails?.db = db;
     _courses.db = db;
     _zdbk.db = db;
     _grsNew.db = db;
@@ -157,6 +163,7 @@ class UgrsSpider implements Spider {
 
   @override
   void logout() {
+    clearPracticeDetailsSession();
     _username = "";
     _password = "";
     _iPlanetDirectoryPro = null;
@@ -177,6 +184,20 @@ class UgrsSpider implements Spider {
 
   Map<String, double>? get practiceScores => _practiceScores;
   bool get isPracticeScoresGet => _isPracticeScoresGet;
+
+  Future<PracticeDetails> getPracticeDetails() {
+    final details = _practiceDetails ??= Sztz(account: _username, db: _db);
+    return details.getPracticeDetails(_httpClient, (fresh) async {
+      // Details must never invoke login(), which also logs into ZDBK.
+      if (!fresh && _iPlanetDirectoryPro != null) return _iPlanetDirectoryPro;
+      return ZjuAm.getSsoCookie(_httpClient, _username, _password);
+    });
+  }
+
+  void clearPracticeDetailsSession() {
+    _practiceDetails?.logout();
+    _practiceDetails = null;
+  }
 
   Future<T> _fetchWithRetry<T>(
     Future<T> Function() operation, {
@@ -514,6 +535,20 @@ class MockSpider extends UgrsSpider {
 
   @override
   List<String> get fetchLabels => const ['校历', '课表', '考试', '成绩', '主修', '作业'];
+
+  @override
+  Future<PracticeDetails> getPracticeDetails() async {
+    // The demo account must never authenticate against real university services.
+    final date = DateTime.now();
+    await _db?.setCachedWebPage(
+        Sztz.cacheKey('3200000000'),
+        jsonEncode({
+          'version': 1,
+          'updatedAt': date.toIso8601String(),
+          'items': <Object>[],
+        }));
+    return PracticeDetails(updatedAt: date);
+  }
 
   @override
   Future<List<String?>> login() async {

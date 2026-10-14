@@ -4,12 +4,14 @@ class AnimateButton extends StatefulWidget {
   final String text;
   final VoidCallback? onTap;
   final CupertinoDynamicColor backgroundColor;
+  final Color? foregroundColor;
 
   const AnimateButton({
     super.key,
     required this.text,
     this.onTap,
     this.backgroundColor = CupertinoColors.systemBackground,
+    this.foregroundColor,
   });
 
   @override
@@ -98,13 +100,14 @@ class _AnimateButtonState extends State<AnimateButton>
                 style: CupertinoTheme.of(context).textTheme.textStyle.copyWith(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: brightness == Brightness.dark
-                          ? CupertinoDynamicColor.resolve(
-                              widget.backgroundColor, context)
-                          : CupertinoTheme.of(context)
-                              .textTheme
-                              .textStyle
-                              .color,
+                      color: widget.foregroundColor ??
+                          (brightness == Brightness.dark
+                              ? CupertinoDynamicColor.resolve(
+                                  widget.backgroundColor, context)
+                              : CupertinoTheme.of(context)
+                                  .textTheme
+                                  .textStyle
+                                  .color),
                     ),
               ),
             ],
