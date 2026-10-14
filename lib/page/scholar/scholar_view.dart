@@ -23,6 +23,8 @@ import 'exam_list/exam_list_view.dart';
 import 'grade_detail/grade_detail_view.dart';
 import 'practice_score/practice_score_page.dart';
 import 'scholar_controller.dart';
+import 'todo/todo_filter.dart';
+import 'todo/todo_list_page.dart';
 import 'package:litechron/page/option/option_controller.dart';
 
 class ScholarErrorHandler extends StatelessWidget {
@@ -560,61 +562,75 @@ class ScholarPage extends StatelessWidget {
                                             CupertinoColors.label, context),
                                       )))
                             ])),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 16),
-                            MultipleColumns(
-                              contents: [
-                                Text(_scholarController.todos.length.toString(),
-                                    style: CupertinoTheme.of(context)
-                                        .textTheme
-                                        .navTitleTextStyle
-                                        .copyWith(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold)),
-                                Text(
-                                    _scholarController.todosInOneDay.length
-                                        .toString(),
-                                    style: CupertinoTheme.of(context)
-                                        .textTheme
-                                        .navTitleTextStyle
-                                        .copyWith(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold)),
-                                Text(
-                                    _scholarController.todosInOneWeek.length
-                                        .toString(),
-                                    style: CupertinoTheme.of(context)
-                                        .textTheme
-                                        .navTitleTextStyle
-                                        .copyWith(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold)),
-                              ],
-                              titles: const ["总计", "一天内", "本周截止"],
-                              onTaps: [() {}, () {}, () {}],
-                            ),
-                            const SizedBox(height: 16),
-                            if (_scholarController.todos.isNotEmpty)
-                              SizedBox(
-                                  height: 102,
-                                  child: _mouseDraggable(
-                                      context,
-                                      ListView.separated(
-                                          scrollDirection: Axis.horizontal,
-                                          itemCount:
-                                              _scholarController.todos.length,
-                                          separatorBuilder: (context, index) =>
-                                              const SizedBox(width: 8),
-                                          itemBuilder: (context, index) {
-                                            final todo =
-                                                _scholarController.todos[index];
-                                            return SizedBox(
-                                                width: 200,
-                                                child: TodoCard(todo: todo));
-                                          })))
-                          ],
-                        ))),
+                        child: Obx(() {
+                          final todos = _scholarController.todos;
+                          return Column(
+                            children: [
+                              const SizedBox(height: 16),
+                              MultipleColumns(
+                                contents: [
+                                  Text(todos.length.toString(),
+                                      style: CupertinoTheme.of(context)
+                                          .textTheme
+                                          .navTitleTextStyle
+                                          .copyWith(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold)),
+                                  Text(
+                                      _scholarController.todosInOneDay.length
+                                          .toString(),
+                                      style: CupertinoTheme.of(context)
+                                          .textTheme
+                                          .navTitleTextStyle
+                                          .copyWith(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold)),
+                                  Text(
+                                      _scholarController.todosInOneWeek.length
+                                          .toString(),
+                                      style: CupertinoTheme.of(context)
+                                          .textTheme
+                                          .navTitleTextStyle
+                                          .copyWith(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold)),
+                                ],
+                                titles: [
+                                  for (final filter in TodoFilter.values)
+                                    filter.label,
+                                ],
+                                onTaps: [
+                                  for (final filter in TodoFilter.values)
+                                    () => Navigator.of(context,
+                                                rootNavigator: true)
+                                            .push(CupertinoPageRoute<void>(
+                                          builder: (_) => TodoListPage(
+                                              initialFilter: filter),
+                                          title: '作业明细',
+                                        )),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              if (todos.isNotEmpty)
+                                SizedBox(
+                                    height: 102,
+                                    child: _mouseDraggable(
+                                        context,
+                                        ListView.separated(
+                                            scrollDirection: Axis.horizontal,
+                                            itemCount: todos.length,
+                                            separatorBuilder:
+                                                (context, index) =>
+                                                    const SizedBox(width: 8),
+                                            itemBuilder: (context, index) {
+                                              final todo = todos[index];
+                                              return SizedBox(
+                                                  width: 200,
+                                                  child: TodoCard(todo: todo));
+                                            })))
+                            ],
+                          );
+                        }))),
               ],
             ),
           ],

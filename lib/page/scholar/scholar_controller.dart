@@ -7,8 +7,15 @@ import 'package:litechron/model/todo.dart';
 import 'package:litechron/model/semester.dart';
 import 'package:litechron/model/scholar.dart';
 import 'package:litechron/model/option.dart';
+import 'todo/todo_filter.dart';
 
 class ScholarController extends GetxController {
+  ScholarController({DateTime Function()? now}) : _now = now ?? DateTime.now {
+    _todoNow = _now().obs;
+  }
+
+  final DateTime Function() _now;
+  late final Rx<DateTime> _todoNow;
   final _scholar = Get.find<Rx<Scholar>>(tag: 'scholar');
   final _option = Get.find<Option>(tag: 'option');
 
@@ -125,15 +132,26 @@ class ScholarController extends GetxController {
     return result;
   }
 
-  List<Todo> get todos => _scholar.value.todos
-    ..sort((a, b) {
-      if (a.endTime == null) return 1;
-      if (b.endTime == null) return -1;
-      return a.endTime!.compareTo(b.endTime!);
-    });
+  /// 首页统计和明细页共用同一时刻，避免截止边界处的数字与列表不一致。
+  DateTime get todoNow => _todoNow.value;
 
-  // 获取当前学期的未完成作业
+  List<Todo> get todos {
+    final indexed = _scholar.value.todos.indexed.toList();
+    indexed.sort((a, b) {
+      final aEnd = a.$2.endTime;
+      final bEnd = b.$2.endTime;
+      if (aEnd == null && bEnd != null) return 1;
+      if (aEnd != null && bEnd == null) return -1;
+      final order = aEnd == null ? 0 : aEnd.compareTo(bEnd!);
+      // List.sort 本身不稳定，用原始下标保留相同时间（含无日期）的顺序。
+      return order == 0 ? a.$1.compareTo(b.$1) : order;
+    });
+    return indexed.map((entry) => entry.$2).toList();
+  }
+
+  // 获取当前学期尚未截止（或没有截止日期）的作业。
   List<Todo> get currentSemesterPendingTodos {
+    final now = todoNow;
     final thisSemester = _scholar.value.thisSemester;
     final currentSemesterCourseNames =
         thisSemester.courses.values.map((course) => course.name).toSet();
@@ -142,26 +160,35 @@ class ScholarController extends GetxController {
       // 检查作业是否属于当前学期的课程
       final isCurrentSemester =
           currentSemesterCourseNames.contains(todo.course);
-      // 检查作业是否未完成（截止时间未过或没有截止时间）
-      final isPending =
-          todo.endTime == null || !todo.endTime!.isBefore(DateTime.now());
+      // 接口没有完成状态字段，这里仅判断截止时间。
+      final isPending = todo.endTime == null || !todo.endTime!.isBefore(now);
       return isCurrentSemester && isPending;
     }).toList();
   }
 
-  List<Todo> get todosInOneDay =>
-      currentSemesterPendingTodos.where((e) => e.isInOneDay()).toList();
+  List<Todo> todosFor(TodoFilter filter) {
+    final window = filter.window;
+    if (window == null) return todos;
+    final end = todoNow.add(window);
+    return currentSemesterPendingTodos.where((todo) {
+      final deadline = todo.endTime;
+      return deadline != null && !deadline.isAfter(end);
+    }).toList();
+  }
 
-  List<Todo> get todosInOneWeek =>
-      currentSemesterPendingTodos.where((e) => e.isInOneWeek()).toList();
+  List<Todo> get todosInOneDay => todosFor(TodoFilter.oneDay);
+
+  List<Todo> get todosInOneWeek => todosFor(TodoFilter.oneWeek);
 
   void _updateDurations() {
+    final now = _now();
+    _todoNow.value = now;
     _durationToLastUpdateGrade.value =
-        DateTime.now().difference(_scholar.value.lastUpdateTimeGrade);
+        now.difference(_scholar.value.lastUpdateTimeGrade);
     _durationToLastUpdateCourse.value =
-        DateTime.now().difference(_scholar.value.lastUpdateTimeCourse);
+        now.difference(_scholar.value.lastUpdateTimeCourse);
     _durationToLastUpdateHomework.value =
-        DateTime.now().difference(_scholar.value.lastUpdateTimeHomework);
+        now.difference(_scholar.value.lastUpdateTimeHomework);
   }
 
   Future<List<String?>> fetchData() async {
@@ -269,6 +296,7 @@ class ScholarController extends GetxController {
   void onReady() {
     super.onReady();
     resetSemesterIndex();
+    _updateDurations();
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       _updateDurations();
