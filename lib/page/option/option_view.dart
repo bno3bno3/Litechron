@@ -451,7 +451,7 @@ class OptionPage extends StatelessWidget {
                   header: Container(
                       padding: const EdgeInsets.only(left: 16),
                       child: Text('关于', style: headerFooterTextStyle)),
-                  children: <CupertinoListTile>[
+                  children: <Widget>[
                     CupertinoListTile(
                       title: const Text('关于 Litechron'),
                       trailing: BackChervonRow(
@@ -466,13 +466,24 @@ class OptionPage extends StatelessWidget {
                                         _optionController.appVersion)));
                       },
                     ),
-                    CupertinoListTile(
-                      title: const Text('检查更新'),
-                      trailing: Obx(() => _optionController.checkingUpdate.value
-                          ? const CupertinoActivityIndicator()
-                          : const CupertinoListTileChevron()),
-                      onTap: () => _checkUpdate(context),
-                    ),
+                    Obx(() {
+                      final checking = _optionController.checkingUpdate.value;
+                      return CupertinoListTile(
+                        title: Text(
+                          checking ? '正在检查…' : '检查更新',
+                          style: TextStyle(
+                            color: checking
+                                ? CupertinoDynamicColor.resolve(
+                                    CupertinoColors.secondaryLabel, context)
+                                : CupertinoTheme.of(context).primaryColor,
+                          ),
+                        ),
+                        trailing: checking
+                            ? const CupertinoActivityIndicator()
+                            : null,
+                        onTap: checking ? null : () => _checkUpdate(context),
+                      );
+                    }),
                     CupertinoListTile(
                       title: const Text('服务条款'),
                       trailing: const BackChervonRow(),
