@@ -62,6 +62,19 @@ class CreditsPage extends StatelessWidget {
                     'bno3bno3',
                     textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 40),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      '感谢 lzh 和 pzh 一直以来的支持与鼓励\n祝二位猛猛涨球',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: secondaryStyle.color,
+                        height: 1.6,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
