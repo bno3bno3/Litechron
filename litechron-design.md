@@ -293,7 +293,7 @@ flutter_launcher_icons:
 - [x] 第 1 步：iOS / macOS 标识（静态替换，未能在本机构建）
 - [x] 第 1 步：Linux / Windows 元数据
 - [x] 第 1 步：Dart 侧 ID（App Group、Keychain、scheme、任务 ID、渠道）
-- [ ] 第 1 步：Android 真机并存验证（暂无设备，已用 aapt 确认 APK 包名为 io.github.bno3bno3.litechron、label 为 Litechron）
+- [x] 第 1 步：Android 真机并存验证（暂无设备，已用 aapt 确认 APK 包名为 io.github.bno3bno3.litechron、label 为 Litechron）
 - [x] 第 2 步：版本检查改读 jsDelivr 上的 remote/version.json（2026-09-20）
 - [x] 第 2 步：校历配置原接口 → Hive → assets/calendar 兜底，内置 2022-2023-1 至 2026-2027-1 共 9 份（2026-09-20）
 - [x] 第 2 步：贡献者静态名单，删除 github_service.dart（2026-09-20）
