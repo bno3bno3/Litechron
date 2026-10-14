@@ -90,15 +90,7 @@ class ECardWidget : GlanceAppWidget() {
     @Composable
     private fun content(context: Context?, id: GlanceId?, balance: Long?, message: String = "待刷新", empty: String = "待刷新") {
         Column(
-            modifier = GlanceModifier.background(GlanceTheme.colors.background).fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp).cornerRadius(16.dp).clickable{
-                context?.let {
-                    val scheme = it.getString(R.string.app_link_scheme)
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("$scheme://ecardpaypage"))
-                    intent.setPackage(it.packageName)
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    it.startActivity(intent)
-                }
-            },
+            modifier = GlanceModifier.background(GlanceTheme.colors.background).fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp).cornerRadius(16.dp).clickable(actionRunCallback<RefreshECardAction>()),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(modifier = GlanceModifier.fillMaxWidth()) {
@@ -159,7 +151,15 @@ class ECardWidget : GlanceAppWidget() {
                             resId = R.drawable.qr_code_24px
                         ),
                         contentDescription = "QR Code Icon",
-                        modifier = GlanceModifier.size(32.dp),
+                        modifier = GlanceModifier.size(32.dp).clickable {
+                            context?.let {
+                                val scheme = it.getString(R.string.app_link_scheme)
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("$scheme://ecardpaypage"))
+                                intent.setPackage(it.packageName)
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                it.startActivity(intent)
+                            }
+                        },
                         colorFilter = ColorFilter.tint(GlanceTheme.colors.primary)
                     )
                 }
