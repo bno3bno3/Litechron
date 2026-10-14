@@ -88,6 +88,7 @@ class _HomePageState extends State<HomePage> {
       enabled: false,
       child: PageView(
         controller: _pageController,
+        physics: const _HomePageScrollPhysics(),
         onPageChanged: (index) {
           if (index != _indexNum) {
             setState(() {
@@ -180,6 +181,27 @@ class _HomePageState extends State<HomePage> {
             );
           });
     }
+  }
+}
+
+class _HomePageScrollPhysics extends PageScrollPhysics {
+  const _HomePageScrollPhysics({super.parent});
+
+  @override
+  _HomePageScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return _HomePageScrollPhysics(parent: buildParent(ancestor));
+  }
+
+  @override
+  SpringDescription get spring {
+    final base = super.spring;
+    // 提高吸附动画的响应速度，同时保持原有阻尼比例和跟手拖动行为。
+    const speed = 1.2;
+    return SpringDescription(
+      mass: base.mass,
+      stiffness: base.stiffness * speed * speed,
+      damping: base.damping * speed,
+    );
   }
 }
 
