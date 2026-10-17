@@ -1,0 +1,4 @@
+<resources>
+    <color name="ecard_widget_initial_background">#FF202124</color>
+    <color name="ecard_widget_initial_text">#FFF5F5F5</color>
+</resources>

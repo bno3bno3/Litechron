@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.appwidget.AppWidgetManager
+import android.util.Log
 import androidx.datastore.preferences.core.Preferences
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
@@ -35,18 +36,16 @@ class ECardWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ECardWidget()
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        // Own the broadcast completion; super.onUpdate also calls goAsync().
-        val pending = goAsync()
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-            try {
-                withTimeout(8_000) {
-                    val runtime = ECardRuntime.get(context)
-                    runtime.enqueue()
-                    runtime.publish()
-                }
-            } catch (_: Exception) {
-                // The durable worker owns retries and the persisted failure state.
-            } finally { pending.finish() }
+        Log.i("LitechronECard", "stage=WIDGET_INIT count=${appWidgetIds.size}")
+        try {
+            // Only enqueue here: no credentials, network, or waiting on WorkManager.
+            ECardRuntime.enqueueFromReceiver(context)
+        } catch (_: Exception) {
+            Log.w("LitechronECard", "stage=WIDGET_ENQUEUE failure=ENQUEUE")
+        } finally {
+            // Glance owns goAsync(), repairs its receiver mapping, and renders the
+            // supplied IDs even when an older release persisted a different class name.
+            super.onUpdate(context, appWidgetManager, appWidgetIds)
         }
     }
 }

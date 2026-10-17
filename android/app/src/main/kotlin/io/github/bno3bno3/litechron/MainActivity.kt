@@ -29,7 +29,7 @@ class MainActivity : FlutterActivity() {
             } else {
                 val response = withContext(Dispatchers.IO) {
                     when (method) {
-                        "update" -> runtime.enqueue()
+                        "update" -> { runtime.publish(); runtime.enqueue() }
                         "logout" -> { runtime.invalidate(logout = true); null }
                         "invalidateSession" -> { runtime.invalidate(); null }
                         "credentialsCommitted" -> { runtime.credentialsCommitted(); null }

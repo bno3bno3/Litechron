@@ -1,0 +1,6 @@
+<resources>
+    <string name="ecard_widget_title">校园卡余额</string>
+    <string name="ecard_widget_pending">待刷新</string>
+    <color name="ecard_widget_initial_background">#FFF5F5F5</color>
+    <color name="ecard_widget_initial_text">#FF202124</color>
+</resources>

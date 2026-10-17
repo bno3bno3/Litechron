@@ -3,12 +3,8 @@ package io.github.bno3bno3.litechron.ecard
 import android.content.Context
 import android.util.Log
 import androidx.datastore.preferences.core.*
-import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.state.updateAppWidgetState
-import androidx.glance.appwidget.updateAll
 import androidx.work.*
 import com.it_nomads.fluttersecurestorage.FlutterSecureStorage
-import io.github.bno3bno3.litechron.ECardWidget
 import io.github.bno3bno3.litechron.auth.AcademicAuthGate
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
@@ -127,12 +123,9 @@ class ECardRuntime private constructor(private val context: Context) : ECardStor
             if (changing) return@withLock false
             generation()
         }
-        val work = OneTimeWorkRequestBuilder<ECardBalanceWorker>()
-            .setInputData(workDataOf("generation" to epoch))
-            .setBackoffCriteria(BackoffPolicy.LINEAR, 30, TimeUnit.SECONDS).build()
         // KEEP merges clicks while queued, running, or backing off. The next idle click
         // always creates a fresh request. No cache-age shortcut is used.
-        WorkManager.getInstance(context).enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.KEEP, work).result.get()
+        enqueueWork(context, epoch).result.get()
         true
     }
 
@@ -154,17 +147,7 @@ class ECardRuntime private constructor(private val context: Context) : ECardStor
 
     private suspend fun publishLocked() {
         val snapshot = synchronized(guard) { prefs.all.toMap() }
-        val ids = GlanceAppWidgetManager(context).getGlanceIds(ECardWidget::class.java)
-        ids.forEach { id ->
-            updateAppWidgetState(context, id) {
-                it.clear()
-                (snapshot["balance"] as? Long)?.let { value -> it[ECardState.balance] = value }
-                (snapshot["updated"] as? Long)?.let { value -> it[ECardState.updated] = value }
-                it[ECardState.status] = snapshot["status"] as? String ?: "pending"
-                (snapshot["failure"] as? String)?.let { value -> it[ECardState.failure] = value }
-            }
-        }
-        ECardWidget().updateAll(context)
+        ECardWidgetPublisher(context).publish(snapshot)
     }
 
     /** Keep channel delivery in the same critical section as account invalidation. */
@@ -175,6 +158,20 @@ class ECardRuntime private constructor(private val context: Context) : ECardStor
 
     companion object {
         const val WORK_NAME = "litechron.ecard.balance"
+        // Safe from onUpdate: constructing the runtime would initialize secure storage.
+        fun enqueueFromReceiver(context: Context) {
+            val epoch = context.getSharedPreferences("ecard_state", Context.MODE_PRIVATE)
+                .getLong("generation", 0)
+            enqueueWork(context, epoch)
+        }
+
+        private fun enqueueWork(context: Context, epoch: Long): Operation {
+            val work = OneTimeWorkRequestBuilder<ECardBalanceWorker>()
+                .setInputData(workDataOf("generation" to epoch))
+                .setBackoffCriteria(BackoffPolicy.LINEAR, 30, TimeUnit.SECONDS).build()
+            return WorkManager.getInstance(context)
+                .enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.KEEP, work)
+        }
         @Volatile private var instance: ECardRuntime? = null
         fun get(context: Context): ECardRuntime = instance ?: synchronized(this) {
             instance ?: ECardRuntime(context.applicationContext).also { instance = it }
@@ -188,6 +185,7 @@ class ECardBalanceWorker(context: Context, parameters: WorkerParameters) : Corou
         val epoch = inputData.getLong("generation", -1)
         var credentials: Credentials? = null
         try {
+            Log.i("LitechronECard", "stage=BALANCE_START attempt=$runAttemptCount")
             credentials = runtime.credentials()
             if (credentials.generation != epoch) return@withContext Result.success()
             runtime.state(credentials, "refreshing")

@@ -145,9 +145,6 @@ class _PracticeScorePageState extends State<PracticeScorePage> {
                     .textTheme
                     .textStyle
                     .copyWith(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(width: 4),
-            const Icon(CupertinoIcons.chevron_right,
-                size: 14, color: CupertinoColors.tertiaryLabel),
           ]),
           const SizedBox(height: 6),
           Text.rich(
