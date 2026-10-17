@@ -11,6 +11,7 @@ import 'package:litechron/page/calendar/calendar_view.dart';
 import 'package:litechron/page/option/option_view.dart';
 
 import 'package:litechron/worker/fuse.dart';
+import 'package:litechron/worker/upcoming_widget.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
@@ -24,6 +25,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _indexNum = 0;
   final PageController _pageController = PageController();
+  late final Worker _widgetNavigation;
 
   // 只构建一次，保持各页 widget 身份稳定，切页时不会重跑各页构造器里的 Get.put
   late final List<Widget> _pages = [
@@ -37,11 +39,15 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _widgetNavigation = ever(UpcomingWidgetSync.openFlow, (_) {
+      if (_pageController.hasClients) _pageController.jumpToPage(0);
+    });
     initFuse();
   }
 
   @override
   void dispose() {
+    _widgetNavigation.dispose();
     _pageController.dispose();
     super.dispose();
   }

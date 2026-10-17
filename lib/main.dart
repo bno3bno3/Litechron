@@ -16,6 +16,7 @@ import 'package:litechron/page/home_page.dart';
 import 'package:litechron/page/option/ecard_pay_page.dart';
 import 'package:litechron/worker/ecard_widget_messenger.dart';
 import 'package:litechron/worker/refresh_lock.dart';
+import 'package:litechron/worker/upcoming_widget.dart';
 import 'package:litechron/database/database_helper.dart';
 import 'package:litechron/utils/global.dart';
 
@@ -35,6 +36,7 @@ void main() async {
   Get.put(db.getOption(), tag: 'option');
   Get.put(db.getFuse().obs, tag: 'fuse');
 
+  UpcomingWidgetSync.start();
   runApp(const LitechronApp());
 
   var scholar = Get.find<Rx<Scholar>>(tag: 'scholar');
@@ -86,6 +88,7 @@ class _LitechronAppState extends State<LitechronApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) UpcomingWidgetSync.schedule();
     if (state == AppLifecycleState.paused) {
       ECardWidgetMessenger.update();
     }
@@ -139,6 +142,10 @@ class _LitechronAppState extends State<LitechronApp>
         navigator?.popUntil((route) =>
             !(route.settings.name?.endsWith('ecardpaypage') ?? false));
         navigator?.pushNamed('/ecardpaypage');
+      }
+      if (uri.toString() == '$scheme://upcoming') {
+        navigator?.popUntil((route) => route.isFirst);
+        UpcomingWidgetSync.openFlow.value++;
       }
     });
   }

@@ -1,0 +1,5 @@
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:initialLayout="@layout/upcoming_widget_initial"
+    android:minWidth="110dp" android:minHeight="110dp"
+    android:resizeMode="horizontal|vertical" android:updatePeriodMillis="0"
+    android:previewImage="@drawable/upcoming_widget_preview" android:widgetCategory="home_screen" />

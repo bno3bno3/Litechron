@@ -1,0 +1,147 @@
+package io.github.bno3bno3.litechron.upcoming
+
+import android.appwidget.AppWidgetManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.glance.*
+import androidx.glance.action.*
+import androidx.glance.appwidget.*
+import androidx.glance.appwidget.action.*
+import androidx.glance.appwidget.lazy.LazyColumn
+import androidx.glance.appwidget.lazy.items
+import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.layout.*
+import androidx.glance.text.*
+import io.github.bno3bno3.litechron.R
+import kotlinx.coroutines.delay
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+
+class UpcomingWidgetReceiver : GlanceAppWidgetReceiver() {
+    override val glanceAppWidget: GlanceAppWidget = UpcomingWidget()
+    override fun onUpdate(c: Context, manager: AppWidgetManager, ids: IntArray) {
+        UpcomingRuntime.schedule(c)
+        super.onUpdate(c, manager, ids)
+    }
+    override fun onDisabled(c: Context) {
+        UpcomingRuntime.schedule(c)
+        super.onDisabled(c)
+    }
+}
+
+class RefreshUpcomingAction : ActionCallback {
+    companion object {
+        val busy = booleanPreferencesKey("busy")
+        val failed = booleanPreferencesKey("failed")
+        private val active = java.util.concurrent.ConcurrentHashMap.newKeySet<GlanceId>()
+    }
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        if (!active.add(glanceId)) return
+        try {
+            updateAppWidgetState(context, glanceId) { it[busy] = true; it[failed] = false }
+            UpcomingWidget().update(context, glanceId)
+            // Only the native local snapshot is read. No credentials or HTTP.
+            UpcomingRuntime.raw(context)?.let(UpcomingSnapshot::parse)
+            updateAppWidgetState(context, glanceId) { it[busy] = false }
+            UpcomingWidget().update(context, glanceId)
+            UpcomingRuntime.schedule(context)
+        } catch (_: Exception) {
+            updateAppWidgetState(context, glanceId) { it[busy] = false; it[failed] = true }
+            UpcomingWidget().update(context, glanceId)
+            delay(2000)
+            updateAppWidgetState(context, glanceId) { it[failed] = false }
+            UpcomingWidget().update(context, glanceId)
+        } finally { active.remove(glanceId) }
+    }
+}
+
+class UpcomingWidget : GlanceAppWidget() {
+    override val sizeMode: SizeMode = SizeMode.Exact
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val intent = Intent(Intent.ACTION_VIEW,
+            Uri.parse("${context.getString(R.string.app_link_scheme)}://upcoming"))
+            .setClass(context, io.github.bno3bno3.litechron.MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        provideContent {
+            GlanceTheme {
+                val state = currentState<androidx.datastore.preferences.core.Preferences>()
+                val raw = UpcomingRuntime.raw(context)
+                val snapshot = runCatching { raw?.let(UpcomingSnapshot::parse) }.getOrNull()
+                val now = System.currentTimeMillis()
+                val remaining = snapshot?.remaining(now).orEmpty()
+                val empty = when {
+                    snapshot == null -> "打开 Litechron\n同步课程与日程"
+                    now < snapshot.from || now >= snapshot.until -> "打开 Litechron\n更新接下来的安排"
+                    snapshot.today(now).isEmpty() -> "今日暂无安排\n享受自由的一天"
+                    else -> "今日安排已结束\n好好休息一下吧"
+                }
+                Column(GlanceModifier.fillMaxSize().background(GlanceTheme.colors.background)
+                    .cornerRadius(20.dp).padding(horizontal = 12.dp, vertical = 4.dp)) {
+                    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (state[RefreshUpcomingAction.failed] == true) "刷新失败" else "接下来",
+                            GlanceModifier.defaultWeight().clickable(actionStartActivity(intent)),
+                            style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                        Box(GlanceModifier.size(48.dp).clickable(actionRunCallback<RefreshUpcomingAction>()),
+                            contentAlignment = Alignment.Center) {
+                            if (state[RefreshUpcomingAction.busy] == true) {
+                                Text("…", style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 20.sp))
+                            } else Image(ImageProvider(R.drawable.sync_24px), "刷新本地安排",
+                                GlanceModifier.size(20.dp), colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground))
+                        }
+                    }
+                    if (remaining.isEmpty() || snapshot == null || now < snapshot.from || now >= snapshot.until) {
+                        Box(GlanceModifier.fillMaxWidth().defaultWeight().clickable(actionStartActivity(intent)), contentAlignment = Alignment.Center) {
+                            Text(empty, style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 14.sp))
+                        }
+                    } else {
+                        LazyColumn(GlanceModifier.fillMaxWidth().defaultWeight()) {
+                            items(remaining, itemId = { stableId(it.id) }) { item ->
+                                Card(item, now, actionStartActivity(intent), item.id != remaining.last().id)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun Card(item: UpcomingItem, now: Long, action: Action, hasNext: Boolean) {
+        val accent = if (item.type == "exam") GlanceTheme.colors.error else GlanceTheme.colors.primary
+        val background = if (item.type == "exam") GlanceTheme.colors.errorContainer else GlanceTheme.colors.secondaryContainer
+        val foreground = if (item.type == "exam") GlanceTheme.colors.onErrorContainer else GlanceTheme.colors.onSecondaryContainer
+        val type = when (item.type) { "exam" -> "考试"; "schedule" -> "日程"; else -> "课程" }
+        Column(GlanceModifier.fillMaxWidth().padding(bottom = if (hasNext) 6.dp else 0.dp)) {
+            // The exposed background is the accent stripe. Unlike a fixed-height
+            // sibling, it follows the text height without forcing list overflow.
+            Column(GlanceModifier.fillMaxWidth().background(accent).cornerRadius(12.dp)
+                .clickable(action).padding(start = 3.dp)) {
+                Column(GlanceModifier.fillMaxWidth().background(background)
+                    .padding(horizontal = 10.dp, vertical = 6.dp)) {
+                    Text("${if (item.start <= now) "进行中" else "即将开始"} · $type", maxLines = 1,
+                        style = TextStyle(color = foreground, fontSize = 11.sp))
+                    Text(item.title, maxLines = 1, style = TextStyle(color = foreground, fontSize = 17.sp, fontWeight = FontWeight.Bold))
+                    if (item.location.isNotBlank()) Text(item.location, maxLines = 2,
+                        style = TextStyle(color = foreground, fontSize = 14.sp))
+                    Text(timeRange(item), maxLines = 1, style = TextStyle(color = foreground, fontSize = 13.sp))
+                }
+            }
+        }
+    }
+}
+
+internal fun stableId(value: String): Long = value.fold(1125899906842597L) { hash, char -> hash * 31 + char.code }
+internal fun timeRange(item: UpcomingItem): String {
+    val zone = ZoneId.systemDefault()
+    val start = Instant.ofEpochMilli(item.start).atZone(zone)
+    val end = Instant.ofEpochMilli(item.end).atZone(zone)
+    val format = DateTimeFormatter.ofPattern("HH:mm")
+    val prefix = if (start.toLocalDate() == end.toLocalDate()) "" else if (start.toLocalDate().plusDays(1) == end.toLocalDate()) "次日 " else "${end.monthValue}/${end.dayOfMonth} "
+    return "${start.format(format)}–$prefix${end.format(format)}"
+}

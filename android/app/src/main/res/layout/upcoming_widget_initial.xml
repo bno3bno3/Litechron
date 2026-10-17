@@ -1,0 +1,11 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp"
+    android:background="@drawable/ecard_widget_initial_background">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="接下来" android:textSize="16sp" android:textStyle="bold"
+        android:textColor="@color/ecard_widget_initial_text" />
+    <TextView android:layout_width="match_parent" android:layout_height="match_parent"
+        android:gravity="center_vertical" android:text="课程、考试与日程\n轻点刷新本地安排" android:textSize="14sp"
+        android:textColor="@color/ecard_widget_initial_text" />
+</LinearLayout>
