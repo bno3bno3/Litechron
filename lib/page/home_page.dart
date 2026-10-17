@@ -23,7 +23,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _indexNum = 0;
+  final ValueNotifier<int> _selectedIndex = ValueNotifier(0);
   final PageController _pageController = PageController();
   late final Worker _widgetNavigation;
 
@@ -49,6 +49,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _widgetNavigation.dispose();
     _pageController.dispose();
+    _selectedIndex.dispose();
     super.dispose();
   }
 
@@ -81,9 +82,8 @@ class _HomePageState extends State<HomePage> {
           label: '设置',
         ),
       ],
-      currentIndex: _indexNum,
       // 点按瞬时切换（iOS 原生习惯）。jumpToPage 会同步触发 onPageChanged，
-      // _indexNum 只在 onPageChanged 里更新，这里不再 setState
+      // 选中项只在 onPageChanged 里更新。
       onTap: (int index) => _pageController.jumpToPage(index),
     );
 
@@ -96,11 +96,7 @@ class _HomePageState extends State<HomePage> {
         controller: _pageController,
         physics: const _HomePageScrollPhysics(),
         onPageChanged: (index) {
-          if (index != _indexNum) {
-            setState(() {
-              _indexNum = index;
-            });
-          }
+          _selectedIndex.value = index;
         },
         // 允许鼠标拖动切页（与原 GestureDetector 行为一致），只作用于本 PageView，
         // 不影响页面内部列表；scrollbars 必须关掉，否则桌面端会叠一条横向滚动条
@@ -147,7 +143,15 @@ class _HomePageState extends State<HomePage> {
           ),
           // 标签栏放在修改后的 MediaQuery 之外，读原始 viewPadding 计算安全区
           MediaQuery.withNoTextScaling(
-            child: Align(alignment: Alignment.bottomCenter, child: tabBar),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              // 跨过页面中点时只更新标签栏，避免在滑动中重建主页布局。
+              child: ValueListenableBuilder<int>(
+                valueListenable: _selectedIndex,
+                builder: (context, index, child) =>
+                    tabBar.copyWith(currentIndex: index),
+              ),
+            ),
           ),
         ],
       ),
@@ -201,8 +205,9 @@ class _HomePageScrollPhysics extends PageScrollPhysics {
   @override
   SpringDescription get spring {
     final base = super.spring;
-    // 提高吸附动画的响应速度，同时保持原有阻尼比例和跟手拖动行为。
-    const speed = 1.2;
+    // 相比原来的 1.2 倍速，将弹簧特征时间缩短约三分之一。
+    // 同比例调整刚度和阻尼，保持阻尼比例和跟手拖动行为。
+    const speed = 1.8;
     return SpringDescription(
       mass: base.mass,
       stiffness: base.stiffness * speed * speed,

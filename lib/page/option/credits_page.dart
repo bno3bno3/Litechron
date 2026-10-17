@@ -66,7 +66,10 @@ class CreditsPage extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
-                      '感谢 lzh 和 pzh 一直以来的支持与鼓励\n祝二位猛猛涨球~',
+                      '感谢 lzh 和 pzh 一直以来的支持与鼓励\n祝二位猛猛涨球~\n'
+                      '\n感谢ls和竺爷一直以来的陪伴与支持\n'
+                      '祝他们的地平线车技越来越好（？）\n'
+                      '竺爷nb啊！',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: secondaryStyle.color,
