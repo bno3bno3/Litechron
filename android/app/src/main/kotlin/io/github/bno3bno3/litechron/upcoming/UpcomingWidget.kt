@@ -85,7 +85,7 @@ class UpcomingWidget : GlanceAppWidget() {
                     .cornerRadius(20.dp).padding(horizontal = 12.dp, vertical = 4.dp)) {
                     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(if (state[RefreshUpcomingAction.failed] == true) "刷新失败" else "接下来",
-                            GlanceModifier.defaultWeight().clickable(actionStartActivity(intent)),
+                            GlanceModifier.defaultWeight().clickable(actionStartActivity(intent)).padding(start = 4.dp),
                             style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
                         Box(GlanceModifier.size(48.dp).clickable(actionRunCallback<RefreshUpcomingAction>()),
                             contentAlignment = Alignment.Center) {
@@ -151,7 +151,9 @@ class UpcomingWidget : GlanceAppWidget() {
     }
 }
 
-internal fun stableId(value: String): Long = value.fold(1125899906842597L) { hash, char -> hash * 31 + char.code }
+// Glance reserves the lowest Long values for automatically generated item IDs.
+internal fun stableId(value: String): Long =
+    value.fold(1125899906842597L) { hash, char -> hash * 31 + char.code } and Long.MAX_VALUE
 internal fun timeRange(item: UpcomingItem): String {
     val zone = ZoneId.systemDefault()
     val start = Instant.ofEpochMilli(item.start).atZone(zone)
