@@ -76,10 +76,10 @@ class UpcomingWidget : GlanceAppWidget() {
                 val now = System.currentTimeMillis()
                 val remaining = snapshot?.remaining(now).orEmpty()
                 val empty = when {
-                    snapshot == null -> "打开 Litechron\n同步课程与日程"
-                    now < snapshot.from || now >= snapshot.until -> "打开 Litechron\n更新接下来的安排"
-                    snapshot.today(now).isEmpty() -> "今日暂无安排\n享受自由的一天"
-                    else -> "今日安排已结束\n好好休息一下吧"
+                    snapshot == null -> "打开 Litechron" to "同步课程与日程"
+                    now < snapshot.from || now >= snapshot.until -> "打开 Litechron" to "更新接下来的安排"
+                    snapshot.today(now).isEmpty() -> "今日暂无安排" to "享受自由的一天"
+                    else -> "今日安排已结束" to "好好休息一下吧"
                 }
                 Column(GlanceModifier.fillMaxSize().background(GlanceTheme.colors.background)
                     .cornerRadius(20.dp).padding(horizontal = 12.dp, vertical = 4.dp)) {
@@ -96,8 +96,23 @@ class UpcomingWidget : GlanceAppWidget() {
                         }
                     }
                     if (remaining.isEmpty() || snapshot == null || now < snapshot.from || now >= snapshot.until) {
-                        Box(GlanceModifier.fillMaxWidth().defaultWeight().clickable(actionStartActivity(intent)), contentAlignment = Alignment.Center) {
-                            Text(empty, style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 14.sp))
+                        val compact = LocalSize.current.height < 180.dp
+                        Box(GlanceModifier.fillMaxWidth().defaultWeight()
+                            .clickable(actionStartActivity(intent))
+                            .padding(start = 8.dp, end = 8.dp,
+                                top = if (compact) 0.dp else 4.dp,
+                                bottom = if (compact) 8.dp else 20.dp),
+                            contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(empty.first, style = TextStyle(
+                                    color = GlanceTheme.colors.onBackground,
+                                    fontSize = 18.sp, fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.Center))
+                                Spacer(GlanceModifier.height(if (compact) 6.dp else 10.dp))
+                                Text(empty.second, style = TextStyle(
+                                    color = GlanceTheme.colors.onSurfaceVariant,
+                                    fontSize = 14.sp, textAlign = TextAlign.Center))
+                            }
                         }
                     } else {
                         LazyColumn(GlanceModifier.fillMaxWidth().defaultWeight()) {
