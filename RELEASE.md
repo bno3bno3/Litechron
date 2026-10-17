@@ -56,7 +56,7 @@ Litechron 通过 GitHub Releases 分发 Android APK。App 每天启动时读取�
 6. **刷新 jsDelivr 缓存**（可选，不做则最长十几小时后生效）：
 
    ```http
-   https://purge.jsdelivr.net/gh/bno3bno3/Litechron@main/remote/version.json
+   https://cdn.jsdelivr.net/gh/bno3bno3/Litechron@main/remote/version.json
    ```
    
    [刷新网址](https://www.jsdelivr.com/tools/purge)
