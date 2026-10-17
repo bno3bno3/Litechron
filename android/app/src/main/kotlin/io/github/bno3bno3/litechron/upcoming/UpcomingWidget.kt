@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -15,6 +16,7 @@ import androidx.glance.appwidget.action.*
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.color.ColorProvider
 import androidx.glance.layout.*
 import androidx.glance.text.*
 import io.github.bno3bno3.litechron.R
@@ -75,6 +77,7 @@ class UpcomingWidget : GlanceAppWidget() {
                 val snapshot = runCatching { raw?.let(UpcomingSnapshot::parse) }.getOrNull()
                 val now = System.currentTimeMillis()
                 val remaining = snapshot?.remaining(now).orEmpty()
+                val palettes = upcomingCardPalettes(remaining)
                 val empty = when {
                     snapshot == null -> "打开 Litechron" to "同步课程与日程"
                     now < snapshot.from || now >= snapshot.until -> "打开 Litechron" to "更新接下来的安排"
@@ -117,7 +120,8 @@ class UpcomingWidget : GlanceAppWidget() {
                     } else {
                         LazyColumn(GlanceModifier.fillMaxWidth().defaultWeight()) {
                             items(remaining, itemId = { stableId(it.id) }) { item ->
-                                Card(item, now, actionStartActivity(intent), item.id != remaining.last().id)
+                                Card(item, now, actionStartActivity(intent), item.id != remaining.last().id,
+                                    palettes[item.id])
                             }
                         }
                     }
@@ -127,10 +131,14 @@ class UpcomingWidget : GlanceAppWidget() {
     }
 
     @Composable
-    private fun Card(item: UpcomingItem, now: Long, action: Action, hasNext: Boolean) {
-        val accent = if (item.type == "exam") GlanceTheme.colors.error else GlanceTheme.colors.primary
-        val background = if (item.type == "exam") GlanceTheme.colors.errorContainer else GlanceTheme.colors.secondaryContainer
-        val foreground = if (item.type == "exam") GlanceTheme.colors.onErrorContainer else GlanceTheme.colors.onSecondaryContainer
+    private fun Card(item: UpcomingItem, now: Long, action: Action, hasNext: Boolean,
+        palette: UpcomingCardPalette?) {
+        val accent = if (palette == null) GlanceTheme.colors.error else
+            ColorProvider(day = Color(palette.lightAccent), night = Color(palette.darkAccent))
+        val background = if (palette == null) GlanceTheme.colors.errorContainer else
+            ColorProvider(day = Color(palette.lightBackground), night = Color(palette.darkBackground))
+        val foreground = if (palette == null) GlanceTheme.colors.onErrorContainer else
+            ColorProvider(day = Color(0xFF202124), night = Color(0xFFF1F3F4))
         val type = when (item.type) { "exam" -> "考试"; "schedule" -> "日程"; else -> "课程" }
         Column(GlanceModifier.fillMaxWidth().padding(bottom = if (hasNext) 6.dp else 0.dp)) {
             // The exposed background is the accent stripe. Unlike a fixed-height
