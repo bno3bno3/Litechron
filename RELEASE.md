@@ -14,7 +14,7 @@ Litechron 通过 GitHub Releases 分发 Android APK。App 每天启动时读取�
 
 1. **改版本号**，两处必须一致，`flutter test` 会校验：
 
-   ```
+   ```zsh
    pubspec.yaml            version: 1.0.1+2
    lib/worker/fuse.dart    version = [1, 0, 1];  build = 2;
    ```
@@ -23,7 +23,7 @@ Litechron 通过 GitHub Releases 分发 Android APK。App 每天启动时读取�
 
 2. **构建**：
 
-   ```
+   ```powershell
    flutter test
    flutter build apk --release
    ```
@@ -32,7 +32,7 @@ Litechron 通过 GitHub Releases 分发 Android APK。App 每天启动时读取�
 
 3. **提交、打标签、推送**：
 
-   ```
+   ```powershell
    git commit -am "发布 1.0.1"
    git tag v1.0.1
    git push origin main v1.0.1
