@@ -7,6 +7,10 @@ import java.time.ZoneId
 data class UpcomingItem(val id: String, val type: String, val title: String,
     val location: String, val start: Long, val end: Long)
 
+internal val upcomingItemOrder = compareBy<UpcomingItem> { it.start }
+    .thenBy { when (it.type) { "exam" -> 0; "schedule" -> 1; else -> 2 } }
+    .thenBy { it.end }.thenBy { it.id }
+
 data class UpcomingSnapshot(val from: Long, val until: Long, val items: List<UpcomingItem>) {
     fun today(now: Long, zone: ZoneId = ZoneId.systemDefault()): List<UpcomingItem> {
         val date = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
@@ -15,11 +19,7 @@ data class UpcomingSnapshot(val from: Long, val until: Long, val items: List<Upc
         return items.filter { it.start < end && it.end > start }
     }
     fun remaining(now: Long, zone: ZoneId = ZoneId.systemDefault()): List<UpcomingItem> =
-        today(now, zone).filter { it.end > now }.sortedWith(
-            compareBy<UpcomingItem> { if (it.start <= now) 0 else 1 }
-                .thenBy { it.start }
-                .thenBy { when (it.type) { "exam" -> 0; "schedule" -> 1; else -> 2 } }
-                .thenBy { it.end }.thenBy { it.id })
+        today(now, zone).filter { it.end > now }.sortedWith(upcomingItemOrder)
 
     companion object {
         fun parse(raw: String): UpcomingSnapshot {

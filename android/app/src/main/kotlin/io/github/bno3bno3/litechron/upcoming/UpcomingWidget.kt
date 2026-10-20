@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -66,6 +68,7 @@ class RefreshUpcomingAction : ActionCallback {
 class UpcomingWidget : GlanceAppWidget() {
     override val sizeMode: SizeMode = SizeMode.Exact
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val initialData = UpcomingRuntime.load(context, System.currentTimeMillis())
         val intent = Intent(Intent.ACTION_VIEW,
             Uri.parse("${context.getString(R.string.app_link_scheme)}://upcoming"))
             .setClass(context, io.github.bno3bno3.litechron.MainActivity::class.java)
@@ -73,11 +76,14 @@ class UpcomingWidget : GlanceAppWidget() {
         provideContent {
             GlanceTheme {
                 val state = currentState<androidx.datastore.preferences.core.Preferences>()
-                val raw = UpcomingRuntime.raw(context)
-                val snapshot = runCatching { raw?.let(UpcomingSnapshot::parse) }.getOrNull()
+                // A live Glance session can recompose without calling
+                // provideGlance again, so reload after its preferences change.
+                val data by produceState(initialValue = initialData, key1 = state) {
+                    value = UpcomingRuntime.load(context, System.currentTimeMillis())
+                }
+                val (snapshot, palettes) = data
                 val now = System.currentTimeMillis()
                 val remaining = snapshot?.remaining(now).orEmpty()
-                val palettes = upcomingCardPalettes(remaining)
                 val empty = when {
                     snapshot == null -> "打开 Litechron" to "同步课程与日程"
                     now < snapshot.from || now >= snapshot.until -> "打开 Litechron" to "更新接下来的安排"

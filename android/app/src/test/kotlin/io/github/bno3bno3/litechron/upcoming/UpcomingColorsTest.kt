@@ -8,15 +8,27 @@ import kotlin.math.pow
 class UpcomingColorsTest {
     private fun item(id: String, type: String = "course") = UpcomingItem(id, type, id, "", 0, 1)
 
-    private fun assertSeparated(items: List<UpcomingItem>) {
+    private fun assertDistinct(items: List<UpcomingItem>) {
         val palettes = upcomingCardPalettes(items)
         assertEquals(items.filter { it.type != "exam" }.map { it.id }.toSet(), palettes.keys)
+        assertThreeDistinct(items, palettes)
         for ((first, second) in items.zipWithNext()) {
             if (first.type == "exam" && second.type == "exam") continue
+            if (first.type != "exam" && second.type != "exam") {
+                assertNotEquals("${first.id} / ${second.id}", palettes[first.id], palettes[second.id])
+                continue
+            }
             val firstHue = palettes[first.id]?.hue ?: 0
             val secondHue = palettes[second.id]?.hue ?: 0
             val difference = abs(firstHue - secondHue)
             assertTrue("${first.id} / ${second.id}", minOf(difference, 360 - difference) >= 90)
+        }
+    }
+
+    private fun assertThreeDistinct(items: List<UpcomingItem>, palettes: Map<String, UpcomingCardPalette>) {
+        for (window in items.filter { it.type != "exam" }.windowed(3, partialWindows = true)) {
+            assertEquals("Repeated palette: ${window.map { it.id }}", window.size,
+                window.map { palettes.getValue(it.id) }.toSet().size)
         }
     }
 
@@ -30,15 +42,15 @@ class UpcomingColorsTest {
         assertEquals(UpcomingCardPalette.entries.toSet(), colors)
     }
 
-    @Test fun collidingIdsAndMixedListsStillHaveSeparatedNeighbors() {
+    @Test fun collidingIdsAndMixedListsStillHaveThreeDistinctColors() {
         // Aa and BB have the same JVM string hash.
         val collision = listOf(item("Aa"), item("BB", "schedule"))
-        assertSeparated(collision)
+        assertDistinct(collision)
         assertNotEquals(upcomingCardPalettes(collision)["Aa"], upcomingCardPalettes(collision)["BB"])
         val items = (0..500).map { index ->
             item("item-$index", when (index % 7) { 0, 1 -> "exam"; 2, 3 -> "schedule"; else -> "course" })
         }
-        assertSeparated(items)
+        assertDistinct(items)
         assertEquals(upcomingCardPalettes(items), upcomingCardPalettes(items))
     }
 
@@ -46,21 +58,59 @@ class UpcomingColorsTest {
         for (index in 0..100) {
             val course = item("course-$index")
             val schedule = item("schedule-$index", "schedule")
-            assertSeparated(listOf(course, item("exam", "exam")))
-            assertSeparated(listOf(item("exam", "exam"), course))
-            assertSeparated(listOf(item("first-exam", "exam"), course, item("last-exam", "exam")))
-            assertSeparated(listOf(course, schedule, item("exam", "exam")))
+            assertDistinct(listOf(course, item("exam", "exam")))
+            assertDistinct(listOf(item("exam", "exam"), course))
+            assertDistinct(listOf(item("first-exam", "exam"), course, item("last-exam", "exam")))
+            assertDistinct(listOf(course, schedule, item("exam", "exam")))
         }
         assertTrue(upcomingCardPalettes(listOf(item("exam", "exam"))).isEmpty())
     }
 
-    @Test fun removedAndReorderedItemsAreRecoloredWithoutChangingInput() {
+    @Test fun completedPrefixAndNewInsertionsPreserveEstablishedColors() {
         val original = (0..30).map { item("course-$it") }
         val before = original.toList()
-        assertSeparated(original.filterIndexed { index, _ -> index % 3 != 0 })
-        assertSeparated(original.reversed())
+        val established = upcomingCardPalettes(original)
+        for (count in 0..original.size) {
+            val remaining = original.drop(count)
+            assertEquals(established.filterKeys { id -> remaining.any { it.id == id } },
+                upcomingCardPalettes(remaining, established))
+        }
+        for (position in 0..original.size) {
+            val updated = original.toMutableList().apply { add(position, item("new", "schedule")) }
+            val palettes = upcomingCardPalettes(updated, established)
+            assertThreeDistinct(updated, palettes)
+            for (old in original) assertEquals(established[old.id], palettes[old.id])
+        }
         assertEquals(before, original)
         assertTrue(upcomingCardPalettes(emptyList()).isEmpty())
+    }
+
+    @Test fun onlyTheLowerMatchingNeighborChangesAfterAnItemDisappears() {
+        val a = item("a")
+        val b = item("b", "schedule")
+        val c = item("c")
+        val established = mapOf("a" to UpcomingCardPalette.BLUE,
+            "b" to UpcomingCardPalette.TEAL, "c" to UpcomingCardPalette.BLUE)
+        // Matching first/third colors do not justify recoloring an old item.
+        assertEquals(established, upcomingCardPalettes(listOf(a, b, c), established))
+        val repaired = upcomingCardPalettes(listOf(a, c), established)
+        assertEquals(established["a"], repaired["a"])
+        assertNotEquals(established["c"], repaired["c"])
+        assertEquals(repaired, upcomingCardPalettes(listOf(a, c), repaired))
+        assertEquals(UpcomingCardPalette.BLUE, established["c"])
+
+        val withExam = listOf(a, item("exam", "exam"), c)
+        assertEquals(established.filterKeys { it != "b" }, upcomingCardPalettes(withExam, established))
+    }
+
+    @Test fun newlyInsertedItemsAvoidEstablishedColorsOnBothSides() {
+        val items = (0..4).map { item("item-$it") }
+        val fixed = mapOf("item-0" to UpcomingCardPalette.BLUE, "item-1" to UpcomingCardPalette.TEAL,
+            "item-3" to UpcomingCardPalette.GREEN, "item-4" to UpcomingCardPalette.ORANGE)
+        val colors = upcomingCardPalettes(items, fixed)
+        assertTrue(colors.getValue("item-2") !in fixed.values)
+        for ((id, palette) in fixed) assertEquals(palette, colors[id])
+        assertThreeDistinct(items, colors)
     }
 
     @Test fun textAndStripesHaveSufficientContrastInBothThemes() {

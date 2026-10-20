@@ -25,7 +25,12 @@ class MainActivity : FlutterActivity() {
                     withContext(Dispatchers.IO) {
                         when (call.method) {
                             "publishSnapshot" -> io.github.bno3bno3.litechron.upcoming.UpcomingRuntime.publish(applicationContext, call.arguments as String)
-                            "invalidateSnapshot" -> io.github.bno3bno3.litechron.upcoming.UpcomingRuntime.invalidate(applicationContext, (call.arguments as Number).toLong())
+                            "invalidateSnapshot" -> {
+                                val args = call.arguments as Map<*, *>
+                                io.github.bno3bno3.litechron.upcoming.UpcomingRuntime.invalidate(
+                                    applicationContext, (args["generation"] as Number).toLong(),
+                                    preserveColors = args["preserveColors"] == true)
+                            }
                             else -> throw IllegalArgumentException("Unsupported method")
                         }
                     }

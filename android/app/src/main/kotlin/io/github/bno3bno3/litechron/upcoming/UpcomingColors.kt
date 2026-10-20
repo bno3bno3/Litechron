@@ -18,26 +18,44 @@ internal enum class UpcomingCardPalette(
     YELLOW(55, 0xFFFAF3CF, 0xFF403A20, 0xFF93801B, 0xFFE0CB6B);
 }
 
-/** Input is the actual display order. Exams retain the widget's theme error colors. */
-internal fun upcomingCardPalettes(items: List<UpcomingItem>): Map<String, UpcomingCardPalette> {
+/**
+ * New courses/schedules avoid the two on either side. Established colors stay
+ * fixed unless two displayed neighbors match, in which case only the lower one
+ * changes. Exams retain the widget's theme error colors.
+ */
+internal fun upcomingCardPalettes(
+    items: List<UpcomingItem>,
+    established: Map<String, UpcomingCardPalette> = emptyMap(),
+    repairAdjacent: Boolean = true,
+): Map<String, UpcomingCardPalette> {
     val result = LinkedHashMap<String, UpcomingCardPalette>()
-    var previousHue: Int? = null
-    for ((index, item) in items.withIndex()) {
-        if (item.type == "exam") {
-            previousHue = 0
-            continue
+    val colored = items.withIndex().filter { it.value.type != "exam" }
+    // Include established colors below a new insertion before assigning it.
+    for ((_, item) in colored) {
+        established[item.id]?.let { result[item.id] = it }
+    }
+    for ((index, entry) in colored.withIndex()) {
+        val (displayIndex, item) = entry
+        val previous = items.getOrNull(displayIndex - 1)
+        val current = result[item.id]
+        val collision = previous != null && previous.type != "exam" && current != null && result[previous.id] == current
+        if (current != null && (!repairAdjacent || !collision)) continue
+
+        val excluded = (maxOf(0, index - 2)..minOf(colored.lastIndex, index + 2))
+            .filter { it != index }.mapNotNull { result[colored[it].value.id] }.toSet()
+        val candidates = UpcomingCardPalette.entries.filter { it !in excluded }
+        val neighborHues = listOfNotNull(previous, items.getOrNull(displayIndex + 1)).mapNotNull {
+            if (it.type == "exam") 0 else result[it.id]?.hue
         }
-        val neighbors = listOfNotNull(previousHue, 0.takeIf { items.getOrNull(index + 1)?.type == "exam" })
-        fun separation(palette: UpcomingCardPalette): Int = neighbors.minOfOrNull { hue ->
+        fun separation(palette: UpcomingCardPalette): Int = neighborHues.minOfOrNull { hue ->
             val difference = abs(palette.hue - hue)
             minOf(difference, 360 - difference)
         } ?: 360
 
         val preferred = UpcomingCardPalette.entries[Math.floorMod(item.id.hashCode(), UpcomingCardPalette.entries.size)]
-        val palette = if (separation(preferred) >= 90) preferred
-            else UpcomingCardPalette.entries.maxBy { separation(it) }
+        val palette = if (preferred in candidates && separation(preferred) >= 90) preferred
+            else candidates.maxBy { separation(it) }
         result[item.id] = palette
-        previousHue = palette.hue
     }
     return result
 }

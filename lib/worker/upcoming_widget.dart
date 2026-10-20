@@ -90,12 +90,17 @@ class UpcomingWidgetSync {
     if (!Platform.isAndroid) return;
     final account = Get.find<Rx<Scholar>>(tag: 'scholar').value.username ?? '';
     if (_account != account) {
+      // Reuse colors on startup; reset them when the user switches accounts.
+      final preserveColors = _account == null;
       _account = account;
       _generation++;
       _signature = null;
       final generation = _generation;
       _pending = _pending.then((_) async {
-        await channel.invokeMethod('invalidateSnapshot', generation);
+        await channel.invokeMethod('invalidateSnapshot', {
+          'generation': generation,
+          'preserveColors': preserveColors,
+        });
       }).catchError((_) {});
     }
     _timer?.cancel();

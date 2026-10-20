@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import androidx.work.*
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.glance.appwidget.state.updateAppWidgetState
@@ -19,24 +20,65 @@ import java.util.concurrent.TimeUnit
 
 object UpcomingRuntime {
     private const val WORK = "upcoming-local-refresh"
+    private const val COLORS = "paletteAssignments"
     private val mutex = Mutex()
     private fun prefs(c: Context) = c.getSharedPreferences("upcoming_widget", Context.MODE_PRIVATE)
     fun raw(c: Context): String? = prefs(c).getString("snapshot", null)
     fun ids(c: Context) = AppWidgetManager.getInstance(c).getAppWidgetIds(
         ComponentName(c, UpcomingWidgetReceiver::class.java))
 
-    suspend fun publish(c: Context, raw: String) = mutex.withLock {
-        UpcomingSnapshot.parse(raw)
-        val generation = JSONObject(raw).getLong("generation")
+    private fun savedPalettes(prefs: SharedPreferences): Map<String, UpcomingCardPalette> {
+        val json = runCatching { JSONObject(prefs.getString(COLORS, null) ?: "{}") }.getOrNull()
+            ?: return emptyMap()
+        return json.keys().asSequence().mapNotNull { id ->
+            UpcomingCardPalette.entries.find { it.name == json.optString(id) }?.let { id to it }
+        }.toMap()
+    }
+
+    private fun encodePalettes(palettes: Map<String, UpcomingCardPalette>) =
+        JSONObject(palettes.mapValues { it.value.name }).toString()
+
+    private fun palettesFor(snapshot: UpcomingSnapshot, saved: Map<String, UpcomingCardPalette>, now: Long)
+        : Map<String, UpcomingCardPalette> {
+        val active = snapshot.items.filter { it.end > now }.sortedWith(upcomingItemOrder)
+        // Reserve colors throughout the snapshot, but repair only neighbors
+        // actually displayed together today, not items on different days.
+        val palettes = upcomingCardPalettes(active, saved, repairAdjacent = false)
+        return palettes + upcomingCardPalettes(snapshot.remaining(now), palettes)
+    }
+
+    internal suspend fun load(c: Context, now: Long): Pair<UpcomingSnapshot?, Map<String, UpcomingCardPalette>> = mutex.withLock {
         val prefs = prefs(c)
-        check(generation == prefs.getLong("generation", -1)) { "Stale snapshot" }
-        check(prefs.edit().putString("snapshot", raw).commit())
+        val snapshot = runCatching { raw(c)?.let(UpcomingSnapshot::parse) }.getOrNull()
+            ?: return@withLock null to emptyMap()
+        val saved = savedPalettes(prefs)
+        val palettes = palettesFor(snapshot, saved, now)
+        if (palettes != saved) check(prefs.edit().putString(COLORS, encodePalettes(palettes)).commit())
+        snapshot to palettes
+    }
+
+    suspend fun publish(c: Context, raw: String) {
+        mutex.withLock {
+            val snapshot = UpcomingSnapshot.parse(raw)
+            val generation = JSONObject(raw).getLong("generation")
+            val prefs = prefs(c)
+            check(generation == prefs.getLong("generation", -1)) { "Stale snapshot" }
+            val palettes = palettesFor(snapshot, savedPalettes(prefs), System.currentTimeMillis())
+            check(prefs.edit().putString("snapshot", raw).putString(COLORS, encodePalettes(palettes)).commit())
+        }
         update(c)
     }
 
-    suspend fun invalidate(c: Context, generation: Long) = mutex.withLock {
-        if (generation < prefs(c).getLong("generation", -1)) return@withLock
-        check(prefs(c).edit().putLong("generation", generation).remove("snapshot").commit())
+    suspend fun invalidate(c: Context, generation: Long, preserveColors: Boolean = false) {
+        val invalidated = mutex.withLock {
+            val prefs = prefs(c)
+            if (generation < prefs.getLong("generation", -1)) return@withLock false
+            val editor = prefs.edit().putLong("generation", generation).remove("snapshot")
+            if (!preserveColors) editor.remove(COLORS)
+            check(editor.commit())
+            true
+        }
+        if (!invalidated) return
         update(c)
     }
 
