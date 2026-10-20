@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -124,16 +125,49 @@ class UpcomingWidget : GlanceAppWidget() {
                             }
                         }
                     } else {
-                        LazyColumn(GlanceModifier.fillMaxWidth().defaultWeight()) {
-                            items(remaining, itemId = { stableId(it.id) }) { item ->
-                                Card(item, now, actionStartActivity(intent), item.id != remaining.last().id,
-                                    palettes[item.id])
+                        // Keep the collection in one Glance tree. Nesting it in
+                        // AndroidRemoteViews breaks adapter binding during async apply.
+                        Box(GlanceModifier.fillMaxWidth().defaultWeight()
+                            .background(GlanceTheme.colors.background).cornerRadius(16.dp)) {
+                            LazyColumn(GlanceModifier.fillMaxSize()) {
+                                items(remaining, itemId = { stableId(it.id) }) { item ->
+                                    Card(item, now, actionStartActivity(intent), item.id != remaining.last().id,
+                                        palettes[item.id])
+                                }
                             }
+                            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) WindowCorners()
                         }
+                        Spacer(GlanceModifier.height(12.dp))
                     }
                 }
             }
         }
+    }
+
+    @Composable
+    private fun WindowCorners() {
+        // Pre-12 RemoteViews cannot set an outline radius. Fixed masks use the
+        // widget background so scrolling cards have the same rounded window.
+        Column(GlanceModifier.fillMaxSize()) {
+            Row(GlanceModifier.fillMaxWidth()) {
+                WindowCorner(R.drawable.upcoming_window_top_left)
+                Spacer(GlanceModifier.defaultWeight())
+                WindowCorner(R.drawable.upcoming_window_top_right)
+            }
+            Spacer(GlanceModifier.defaultWeight())
+            Row(GlanceModifier.fillMaxWidth()) {
+                WindowCorner(R.drawable.upcoming_window_bottom_left)
+                Spacer(GlanceModifier.defaultWeight())
+                WindowCorner(R.drawable.upcoming_window_bottom_right)
+            }
+        }
+    }
+
+    @Composable
+    private fun WindowCorner(drawable: Int) {
+        Image(ImageProvider(drawable), contentDescription = null,
+            modifier = GlanceModifier.size(16.dp),
+            colorFilter = ColorFilter.tint(GlanceTheme.colors.background))
     }
 
     @Composable
