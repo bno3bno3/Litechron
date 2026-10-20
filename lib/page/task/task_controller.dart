@@ -135,6 +135,34 @@ class TaskController extends GetxController {
     return true;
   }
 
+  bool deleteTask(String uid) {
+    final task = taskList.firstWhereOrNull((task) => task.uid == uid);
+    if (task == null || task.status == TaskStatus.deleted) return false;
+    task.status = TaskStatus.deleted;
+    updateDeadlineList();
+    updateDeadlineListTime();
+    return true;
+  }
+
+  bool toggleTaskCompletion(String uid) {
+    final task = taskList.firstWhereOrNull((task) => task.uid == uid);
+    if (task == null ||
+        task.type != TaskType.deadline ||
+        task.status == TaskStatus.deleted) {
+      return false;
+    }
+    if (task.status == TaskStatus.completed) {
+      task.timeSpent = Duration.zero;
+      task.forceRefreshStatus();
+    } else {
+      task.timeSpent = task.timeNeeded;
+      task.status = TaskStatus.completed;
+    }
+    updateDeadlineList();
+    updateDeadlineListTime();
+    return true;
+  }
+
   void removeCompletedDeadline(context) {
     taskList.removeWhere((element) =>
         element.type == TaskType.deadline &&

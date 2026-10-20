@@ -24,6 +24,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final ValueNotifier<int> _selectedIndex = ValueNotifier(0);
+  final ValueNotifier<bool> _taskPageActive = ValueNotifier(false);
   final PageController _pageController = PageController();
   late final Worker _widgetNavigation;
 
@@ -31,7 +32,7 @@ class _HomePageState extends State<HomePage> {
   late final List<Widget> _pages = [
     _KeepAlivePage(child: FlowPage()),
     _KeepAlivePage(child: CalendarPage()),
-    _KeepAlivePage(child: TaskPage()),
+    _KeepAlivePage(child: TaskPage(isActive: _taskPageActive)),
     _KeepAlivePage(child: ScholarPage()),
     _KeepAlivePage(child: OptionPage()),
   ];
@@ -50,6 +51,7 @@ class _HomePageState extends State<HomePage> {
     _widgetNavigation.dispose();
     _pageController.dispose();
     _selectedIndex.dispose();
+    _taskPageActive.dispose();
     super.dispose();
   }
 
@@ -97,6 +99,7 @@ class _HomePageState extends State<HomePage> {
         physics: const _HomePageScrollPhysics(),
         onPageChanged: (index) {
           _selectedIndex.value = index;
+          _taskPageActive.value = index == 2;
         },
         // 允许鼠标拖动切页（与原 GestureDetector 行为一致），只作用于本 PageView，
         // 不影响页面内部列表；scrollbars 必须关掉，否则桌面端会叠一条横向滚动条
