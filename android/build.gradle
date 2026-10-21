@@ -17,7 +17,16 @@ allprojects {
 
 rootProject.buildDir = '../build'
 subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    def sharedBuildDir = rootProject.file("${rootProject.buildDir}/${project.name}")
+    // AGP generates unit-test paths relative to each plugin's source directory.
+    // Windows cannot relativize a Pub plugin on C: against build outputs on D:.
+    // Keep cross-drive outputs beside the plugin, isolated for this checkout.
+    if (project.projectDir.toPath().root != sharedBuildDir.toPath().root) {
+        def checkoutId = Integer.toHexString(rootProject.projectDir.canonicalPath.hashCode())
+        project.buildDir = new File(project.projectDir, "build/litechron-${checkoutId}")
+    } else {
+        project.buildDir = sharedBuildDir
+    }
 }
 subprojects {
     project.evaluationDependsOn(':app')
@@ -25,4 +34,5 @@ subprojects {
 
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
+    delete subprojects.collect { it.buildDir }
 }

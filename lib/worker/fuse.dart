@@ -11,8 +11,8 @@ class Fuse {
 
   /// 与 pubspec.yaml 的 version 保持一致，由 test/fuse_version_test.dart 校验
   static const bool isBeta = false;
-  static const version = [1, 0, 8];
-  static const build = 9;
+  static const version = [1, 0, 9];
+  static const build = 10;
   List<int>? remoteVersion;
   int? remoteBuild;
   bool hasNewVersion = false;
