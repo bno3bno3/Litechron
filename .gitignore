@@ -12,6 +12,9 @@
 .history
 .svn/
 
+# Eclipse Buildship local Gradle settings
+**/.settings/org.eclipse.buildship.core.prefs
+
 # IntelliJ related
 *.iml
 *.ipr
