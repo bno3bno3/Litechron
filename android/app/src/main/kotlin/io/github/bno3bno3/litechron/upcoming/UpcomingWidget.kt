@@ -93,7 +93,7 @@ class UpcomingWidget : GlanceAppWidget() {
                         Text(if (state[RefreshUpcomingAction.failed] == true) "刷新失败" else "接下来",
                             GlanceModifier.defaultWeight().clickable(actionStartActivity(intent)).padding(start = 4.dp),
                             style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 14.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                        Box(GlanceModifier.size(48.dp).clickable(actionRunCallback<RefreshUpcomingAction>()),
+                        Box(GlanceModifier.width(48.dp).height(36.dp).clickable(actionRunCallback<RefreshUpcomingAction>()),
                             contentAlignment = Alignment.Center) {
                             if (state[RefreshUpcomingAction.busy] == true) {
                                 Text("…", style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 20.sp))
