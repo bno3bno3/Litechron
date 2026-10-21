@@ -6,65 +6,39 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:litechron/model/period.dart';
 import 'package:litechron/model/scholar.dart';
-import 'package:litechron/model/task.dart';
 
-/// Read-only expansion: never advances the user's persisted repeating tasks.
+/// Mirrors the page's prepared list without expanding or reordering it.
 Map<String, dynamic> buildUpcomingSnapshot(
-    Iterable<Period> academic, Iterable<Task> tasks, DateTime now) {
-  final first = DateTime(now.year, now.month, now.day);
-  final until = DateTime(now.year, now.month, now.day + 30);
-  final entries = <String, Map<String, dynamic>>{};
-  void add(String source, String type, String title, String location,
-      DateTime start, DateTime end) {
-    if (!end.isAfter(first) || !start.isBefore(until) || !end.isAfter(start)) {
-      return;
-    }
-    final id =
-        '$type:$source:${start.millisecondsSinceEpoch}:${end.millisecondsSinceEpoch}';
-    entries[id] = {
-      'id': id,
-      'type': type,
-      'title': title,
-      'location': location,
-      'start': start.millisecondsSinceEpoch,
-      'end': end.millisecondsSinceEpoch,
+    Iterable<Period> periods, DateTime now) {
+  final items = <Map<String, dynamic>>[];
+  for (final period in periods) {
+    final type = switch (period.type) {
+      PeriodType.classes => 'course',
+      PeriodType.test => 'exam',
+      PeriodType.user => 'schedule',
+      PeriodType.flow => 'flow',
+      PeriodType.virtual => null,
     };
+    if (type == null || !period.endTime.isAfter(period.startTime)) continue;
+    // Repeating schedules share a source UID; their interval identifies each
+    // occurrence. Description/progress changes must not change card identity.
+    final source = period.type == PeriodType.user
+        ? period.fromUid ?? period.uid
+        : period.uid;
+    final start = period.startTime.millisecondsSinceEpoch;
+    final end = period.endTime.millisecondsSinceEpoch;
+    items.add({
+      'id': '$type:$source:$start:$end',
+      'type': type,
+      'title': period.summary,
+      'location': period.location,
+      'start': start,
+      'end': end,
+    });
   }
-
-  for (final p in academic) {
-    if (p.type != PeriodType.classes && p.type != PeriodType.test) continue;
-    add(p.uid, p.type == PeriodType.test ? 'exam' : 'course', p.summary,
-        p.location, p.startTime, p.endTime);
-  }
-  for (final task in tasks) {
-    if (task.type == TaskType.deadline || task.status == TaskStatus.deleted) {
-      continue;
-    }
-    final copy = task.copyWith();
-    // Archived occurrences still establish whether today has already finished.
-    if (copy.type == TaskType.fixedlegacy ||
-        copy.repeatType == TaskRepeatType.norepeat) {
-      add(task.fromUid ?? task.uid, 'schedule', copy.summary, copy.location,
-          copy.startTime, copy.endTime);
-      continue;
-    }
-    while (
-        copy.status != TaskStatus.outdated && copy.startTime.isBefore(until)) {
-      add(task.uid, 'schedule', copy.summary, copy.location, copy.startTime,
-          copy.endTime);
-      final previous = copy.startTime;
-      copy.setToNextPeriod();
-      if (!copy.startTime.isAfter(previous)) break;
-    }
-  }
-  final items = entries.values.toList()
-    ..sort((a, b) => (a['id'] as String).compareTo(b['id'] as String));
   return {
-    'version': 1,
+    'version': 2,
     'generatedAt': now.millisecondsSinceEpoch,
-    'from': first.millisecondsSinceEpoch,
-    'until': until.millisecondsSinceEpoch,
-    'timeZoneOffsetMinutes': now.timeZoneOffset.inMinutes,
     'items': items,
   };
 }
@@ -74,6 +48,7 @@ class UpcomingWidgetSync {
       MethodChannel('io.github.bno3bno3.litechron/upcomingWidget');
   static final openFlow = 0.obs;
   static Timer? _timer;
+  static bool _flowListReady = false;
   static String? _account;
   static String? _signature;
   static int _generation = DateTime.now().microsecondsSinceEpoch;
@@ -81,8 +56,19 @@ class UpcomingWidgetSync {
 
   static void start() {
     if (!Platform.isAndroid) return;
-    ever(Get.find<Rx<Scholar>>(tag: 'scholar'), (_) => schedule());
-    ever(Get.find<RxList<Task>>(tag: 'taskList'), (_) => schedule());
+    ever(Get.find<Rx<Scholar>>(tag: 'scholar'), (_) {
+      // Wait for the page to merge refreshed academic data before publishing.
+      _flowListReady = false;
+      schedule();
+    });
+    ever(Get.find<RxList<Period>>(tag: 'flowList'), (_) => schedule());
+    schedule();
+  }
+
+  /// Called after the page has finished preparing its shared list.
+  static void flowListPrepared() {
+    if (!Platform.isAndroid) return;
+    _flowListReady = true;
     schedule();
   }
 
@@ -104,12 +90,11 @@ class UpcomingWidgetSync {
       }).catchError((_) {});
     }
     _timer?.cancel();
+    if (!_flowListReady) return;
     _timer = Timer(const Duration(milliseconds: 250), () {
       final generation = _generation;
       final snapshot = buildUpcomingSnapshot(
-          Get.find<Rx<Scholar>>(tag: 'scholar').value.periods,
-          Get.find<RxList<Task>>(tag: 'taskList'),
-          DateTime.now());
+          Get.find<RxList<Period>>(tag: 'flowList'), DateTime.now());
       final signature = jsonEncode({...snapshot}..remove('generatedAt'));
       if (_signature == signature) return;
       snapshot['generation'] = generation;

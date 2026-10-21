@@ -26,7 +26,6 @@ import io.github.bno3bno3.litechron.R
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 class UpcomingWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = UpcomingWidget()
@@ -84,13 +83,10 @@ class UpcomingWidget : GlanceAppWidget() {
                 }
                 val (snapshot, palettes) = data
                 val now = System.currentTimeMillis()
-                val remaining = snapshot?.remaining(now).orEmpty()
-                val empty = when {
-                    snapshot == null -> "打开 Litechron" to "同步课程与日程"
-                    now < snapshot.from || now >= snapshot.until -> "打开 Litechron" to "更新接下来的安排"
-                    snapshot.today(now).isEmpty() -> "今日暂无安排" to "享受自由的一天"
-                    else -> "今日安排已结束" to "好好休息一下吧"
-                }
+                val rows = snapshot?.rows(now).orEmpty()
+                val today = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).toLocalDate()
+                val empty = if (snapshot == null) "打开 Litechron" to "同步接下来的安排"
+                    else "暂无接下来的安排" to "打开 Litechron 查看或添加安排"
                 Column(GlanceModifier.fillMaxSize().background(GlanceTheme.colors.background)
                     .cornerRadius(20.dp).padding(horizontal = 12.dp, vertical = 4.dp)) {
                     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -105,7 +101,7 @@ class UpcomingWidget : GlanceAppWidget() {
                                 GlanceModifier.size(20.dp), colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground))
                         }
                     }
-                    if (remaining.isEmpty() || snapshot == null || now < snapshot.from || now >= snapshot.until) {
+                    if (rows.isEmpty()) {
                         val compact = LocalSize.current.height < 180.dp
                         Box(GlanceModifier.fillMaxWidth().defaultWeight()
                             .clickable(actionStartActivity(intent))
@@ -130,9 +126,15 @@ class UpcomingWidget : GlanceAppWidget() {
                         Box(GlanceModifier.fillMaxWidth().defaultWeight()
                             .background(GlanceTheme.colors.background).cornerRadius(16.dp)) {
                             LazyColumn(GlanceModifier.fillMaxSize()) {
-                                items(remaining, itemId = { stableId(it.id) }) { item ->
-                                    Card(item, now, actionStartActivity(intent), item.id != remaining.last().id,
-                                        palettes[item.id])
+                                items(rows, itemId = { stableId(it.id) }) { row ->
+                                    when (row) {
+                                        is UpcomingRow.DateHeader -> Text(dateTitle(row.date, today),
+                                            GlanceModifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
+                                            style = TextStyle(color = GlanceTheme.colors.onBackground,
+                                                fontSize = 14.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                                        is UpcomingRow.Event -> Card(row.item, now, actionStartActivity(intent),
+                                            row.hasNextInDay, palettes[row.item.id])
+                                    }
                                 }
                             }
                             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) WindowCorners()
@@ -179,7 +181,7 @@ class UpcomingWidget : GlanceAppWidget() {
             ColorProvider(day = Color(palette.lightBackground), night = Color(palette.darkBackground))
         val foreground = if (palette == null) GlanceTheme.colors.onErrorContainer else
             ColorProvider(day = Color(0xFF202124), night = Color(0xFFF1F3F4))
-        val type = when (item.type) { "exam" -> "考试"; "schedule" -> "日程"; else -> "课程" }
+        val type = when (item.type) { "exam" -> "考试"; "schedule" -> "日程"; "flow" -> "规划任务"; else -> "课程" }
         Column(GlanceModifier.fillMaxWidth().padding(bottom = if (hasNext) 6.dp else 0.dp)) {
             // The exposed background is the accent stripe. Unlike a fixed-height
             // sibling, it follows the text height without forcing list overflow.
@@ -192,7 +194,7 @@ class UpcomingWidget : GlanceAppWidget() {
                     Text(item.title, maxLines = 1, style = TextStyle(color = foreground, fontSize = 17.sp, fontWeight = FontWeight.Bold))
                     if (item.location.isNotBlank()) Text(item.location, maxLines = 2,
                         style = TextStyle(color = foreground, fontSize = 14.sp))
-                    Text(timeRange(item), maxLines = 1, style = TextStyle(color = foreground, fontSize = 13.sp))
+                    Text(timeRange(item, now), maxLines = 2, style = TextStyle(color = foreground, fontSize = 13.sp))
                 }
             }
         }
@@ -202,11 +204,3 @@ class UpcomingWidget : GlanceAppWidget() {
 // Glance reserves the lowest Long values for automatically generated item IDs.
 internal fun stableId(value: String): Long =
     value.fold(1125899906842597L) { hash, char -> hash * 31 + char.code } and Long.MAX_VALUE
-internal fun timeRange(item: UpcomingItem): String {
-    val zone = ZoneId.systemDefault()
-    val start = Instant.ofEpochMilli(item.start).atZone(zone)
-    val end = Instant.ofEpochMilli(item.end).atZone(zone)
-    val format = DateTimeFormatter.ofPattern("HH:mm")
-    val prefix = if (start.toLocalDate() == end.toLocalDate()) "" else if (start.toLocalDate().plusDays(1) == end.toLocalDate()) "次日 " else "${end.monthValue}/${end.dayOfMonth} "
-    return "${start.format(format)}–$prefix${end.format(format)}"
-}

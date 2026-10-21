@@ -40,11 +40,11 @@ object UpcomingRuntime {
 
     private fun palettesFor(snapshot: UpcomingSnapshot, saved: Map<String, UpcomingCardPalette>, now: Long)
         : Map<String, UpcomingCardPalette> {
-        val active = snapshot.items.filter { it.end > now }.sortedWith(upcomingItemOrder)
-        // Reserve colors throughout the snapshot, but repair only neighbors
-        // actually displayed together today, not items on different days.
+        val active = snapshot.remaining(now)
+        // Headers separate days, so only repair adjacent colors within a day.
         val palettes = upcomingCardPalettes(active, saved, repairAdjacent = false)
-        return palettes + upcomingCardPalettes(snapshot.remaining(now), palettes)
+        return palettes + active.groupBy { it.displayDate(now, ZoneId.systemDefault()) }.values
+            .flatMap { upcomingCardPalettes(it, palettes).entries }.associate { it.toPair() }
     }
 
     internal suspend fun load(c: Context, now: Long): Pair<UpcomingSnapshot?, Map<String, UpcomingCardPalette>> = mutex.withLock {

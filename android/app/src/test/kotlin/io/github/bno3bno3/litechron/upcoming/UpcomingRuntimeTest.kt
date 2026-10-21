@@ -24,10 +24,9 @@ class UpcomingRuntimeTest {
     }
 
     private fun snapshot(generation: Long, now: Long, items: List<UpcomingItem>): String = JSONObject().apply {
-        put("version", 1)
+        put("version", 2)
         put("generation", generation)
-        put("from", now - 86_400_000)
-        put("until", now + 30 * 86_400_000L)
+        put("generatedAt", now)
         put("items", JSONArray().apply {
             for (item in items) put(JSONObject().apply {
                 put("id", item.id); put("type", item.type); put("title", item.title)
@@ -38,7 +37,7 @@ class UpcomingRuntimeTest {
 
     @Test fun switchRejectsLateOldAccountAndInvalidDataPreservesValidCache() = runBlocking {
         val context = RuntimeEnvironment.getApplication()
-        val first = """{"version":1,"generation":1,"from":0,"until":1000,"items":[]}"""
+        val first = """{"version":2,"generation":1,"items":[]}"""
         val second = first.replace("\"generation\":1", "\"generation\":2")
         UpcomingRuntime.invalidate(context, 1)
         UpcomingRuntime.publish(context, first)
@@ -64,8 +63,8 @@ class UpcomingRuntimeTest {
         val initial = UpcomingRuntime.load(context, now).second
 
         val inserted = UpcomingItem("inserted", "schedule", "示例日程", "", now - 57_500, now + 3_600_000)
-        val updated = items + inserted
-        UpcomingRuntime.publish(context, snapshot(1, now, updated.reversed()))
+        val updated = items.take(3) + inserted + items.drop(3)
+        UpcomingRuntime.publish(context, snapshot(1, now, updated))
         val afterInsert = UpcomingRuntime.load(context, now).second
         for (item in items) assertEquals(initial[item.id], afterInsert[item.id])
         val neighbors = listOf(items[1], items[2], items[3], items[4])
@@ -104,5 +103,46 @@ class UpcomingRuntimeTest {
         val stored = JSONObject(context.getSharedPreferences("upcoming_widget", 0)
             .getString("paletteAssignments", "{}")!!)
         assertEquals(repaired.getValue("c").name, stored.getString("c"))
+    }
+
+    @Test fun flowEditsAndRemovalReplaceThePublishedPageList() = runBlocking {
+        val context = RuntimeEnvironment.getApplication()
+        val now = System.currentTimeMillis()
+        val course = UpcomingItem("course", "course", "示例课程", "", now, now + 3_600_000)
+        val flow = UpcomingItem("flow", "flow", "示例规划", "", now, now + 7_200_000)
+        UpcomingRuntime.invalidate(context, 1)
+        UpcomingRuntime.publish(context, snapshot(1, now, listOf(course, flow)))
+        val originalPalette = UpcomingRuntime.load(context, now).second.getValue(flow.id)
+
+        val edited = flow.copy(title = "更新后的规划")
+        UpcomingRuntime.publish(context, snapshot(1, now, listOf(course, edited)))
+        val updated = UpcomingRuntime.load(context, now)
+        assertEquals(listOf(course, edited), updated.first!!.remaining(now))
+        assertEquals(originalPalette, updated.second[flow.id])
+
+        UpcomingRuntime.publish(context, snapshot(1, now, listOf(course)))
+        val removed = UpcomingRuntime.load(context, now)
+        assertEquals(listOf(course), removed.first!!.remaining(now))
+        assertFalse(removed.second.containsKey(flow.id))
+    }
+
+    @Test fun dateHeadersDoNotMakeColorsOnDifferentDaysCollide() = runBlocking {
+        val context = RuntimeEnvironment.getApplication()
+        val now = System.currentTimeMillis()
+        val items = listOf(
+            UpcomingItem("today", "course", "示例课程", "", now, now + 3_600_000),
+            UpcomingItem("tomorrow", "flow", "示例规划", "", now + 86_400_000, now + 90_000_000))
+        val established = items.associate { it.id to UpcomingCardPalette.BLUE }
+        context.getSharedPreferences("upcoming_widget", 0).edit()
+            .putString("snapshot", snapshot(1, now, items))
+            .putString("paletteAssignments", JSONObject(established.mapValues { it.value.name }).toString()).commit()
+        assertEquals(established, UpcomingRuntime.load(context, now).second)
+    }
+
+    @Test fun legacyIndependentListRequiresAPageSync() = runBlocking {
+        val context = RuntimeEnvironment.getApplication()
+        context.getSharedPreferences("upcoming_widget", 0).edit()
+            .putString("snapshot", """{"version":1,"from":0,"until":9999999999999,"items":[]}""").commit()
+        assertNull(UpcomingRuntime.load(context, System.currentTimeMillis()).first)
     }
 }

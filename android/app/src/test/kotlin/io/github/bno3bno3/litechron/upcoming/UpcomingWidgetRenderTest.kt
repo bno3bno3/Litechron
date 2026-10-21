@@ -17,6 +17,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.glance.appwidget.compose
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -27,10 +28,16 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.Executor
 import java.lang.reflect.Proxy
+import java.time.Instant
+import java.time.ZoneId
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28, 35], application = Application::class)
 class UpcomingWidgetRenderTest {
+    @Before fun clearSnapshot() {
+        RuntimeEnvironment.getApplication().getSharedPreferences("upcoming_widget", 0).edit().clear().commit()
+    }
+
     @Test fun emptyWidgetComposesAndInflatesWithTitle() = runBlocking {
         val context = RuntimeEnvironment.getApplication()
         val views = UpcomingWidget().compose(
@@ -45,29 +52,70 @@ class UpcomingWidgetRenderTest {
     }
 
     @Test fun scheduledWidgetComposesAndInflates() = runBlocking {
+        checkScheduledWidget(DpSize(200.dp, 200.dp))
+    }
+
+    @Test fun smallWidgetKeepsItsScrollableDateRows() = runBlocking {
+        checkScheduledWidget(DpSize(110.dp, 110.dp))
+    }
+
+    @Test fun tallWidgetKeepsItsScrollableDateRows() = runBlocking {
+        checkScheduledWidget(DpSize(320.dp, 400.dp))
+    }
+
+    @Test @Config(qualifiers = "night")
+    fun darkWidgetComposesAndInflates() = runBlocking {
+        checkScheduledWidget(DpSize(200.dp, 200.dp))
+    }
+
+    @Test fun finishedListShowsAnUpcomingEmptyState() = runBlocking {
         val context = RuntimeEnvironment.getApplication()
-        val now = System.currentTimeMillis()
-        val items = JSONArray()
-        listOf("course", "exam", "schedule").forEachIndexed { index, type ->
-            items.put(JSONObject().apply {
-                put("id", "$type-$index")
-                put("type", type)
-                put("title", "示例安排 $index")
-                put("location", "示例地点")
-                put("start", now - 60_000)
-                put("end", now + 3_600_000)
-            })
-        }
+        saveSnapshot(context, JSONArray().put(JSONObject().apply {
+            put("id", "ended"); put("type", "flow"); put("title", "示例规划")
+            put("location", ""); put("start", 1); put("end", 2)
+        }))
+        val views = UpcomingWidget().compose(context, size = DpSize(200.dp, 200.dp), state = emptyPreferences())
+        val labels = textViews(views.apply(context, FrameLayout(context))).map { it.text.toString() }
+        assertTrue("Wrong empty state: $labels", "暂无接下来的安排" in labels)
+    }
+
+    @Test fun futureOnlyListShowsTomorrowInsteadOfATodayEmptyState() = runBlocking {
+        checkScheduledWidget(DpSize(200.dp, 200.dp), futureOnly = true)
+    }
+
+    private fun saveSnapshot(context: Context, items: JSONArray) {
         context.getSharedPreferences("upcoming_widget", 0).edit()
             .putString("snapshot", JSONObject().apply {
-                put("version", 1)
-                put("from", now - 86_400_000)
-                put("until", now + 86_400_000)
+                put("version", 2)
                 put("items", items)
             }.toString()).commit()
+    }
+
+    private suspend fun checkScheduledWidget(size: DpSize, futureOnly: Boolean = false) {
+        val context = RuntimeEnvironment.getApplication()
+        val now = System.currentTimeMillis()
+        val zone = ZoneId.systemDefault()
+        val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+        val tomorrow = today.plusDays(1).atTime(10, 0).atZone(zone).toInstant().toEpochMilli()
+        val far = today.plusDays(80).atTime(10, 0).atZone(zone).toInstant().toEpochMilli()
+        val events = buildList {
+            if (!futureOnly) listOf("course", "exam", "schedule", "flow").forEachIndexed { index, type ->
+                add(UpcomingItem("$type-$index", type, "示例安排 $index", "示例地点", now - 60_000, now + 3_600_000))
+            }
+            add(UpcomingItem("tomorrow", "schedule", "明天的日程", "", tomorrow, tomorrow + 3_600_000))
+            add(UpcomingItem("far", "flow", "较远日期的规划", "示例地点", far, far + 3_600_000))
+        }
+        val items = JSONArray()
+        events.forEach { item ->
+            items.put(JSONObject().apply {
+                put("id", item.id); put("type", item.type); put("title", item.title)
+                put("location", item.location); put("start", item.start); put("end", item.end)
+            })
+        }
+        saveSnapshot(context, items)
         val views = UpcomingWidget().compose(
             context,
-            size = DpSize(200.dp, 200.dp),
+            size = size,
             state = emptyPreferences(),
         )
         // Collection adapters are only installed when the root parent is a
@@ -77,20 +125,28 @@ class UpcomingWidgetRenderTest {
             val root = if (asynchronous) applyAsync(views, host) else views.apply(context, host)
             val labels = textViews(root).map { it.text.toString() }
             assertTrue("Title missing: $labels", "接下来" in labels)
-            val pixels = (200 * context.resources.displayMetrics.density).toInt()
-            root.measure(View.MeasureSpec.makeMeasureSpec(pixels, View.MeasureSpec.EXACTLY),
-                View.MeasureSpec.makeMeasureSpec(pixels, View.MeasureSpec.EXACTLY))
-            root.layout(0, 0, pixels, pixels)
+            val title = textViews(root).single { it.text.toString() == "接下来" }
+            // Glance may put the click target on a wrapper around the text.
+            assertTrue("Title should open the page: ${describe(root)}",
+                generateSequence<View>(title) { it.parent as? View }.any { it.hasOnClickListeners() })
+            val width = (size.width.value * context.resources.displayMetrics.density).toInt()
+            val height = (size.height.value * context.resources.displayMetrics.density).toInt()
+            root.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+            root.layout(0, 0, width, height)
             shadowOf(Looper.getMainLooper()).idle()
             val list = descendants(root).filterIsInstance<ListView>().single()
             assertTrue("Blank list (async=$asynchronous): ${describe(root)}", list.width > 0 && list.height > 0)
             if (Build.VERSION.SDK_INT >= 31) {
                 assertTrue("List window must clip its corners", (list.parent as View).clipToOutline)
-                assertTrue("No schedule rows (async=$asynchronous): ${describe(root)}", list.count == 3)
+                val dates = events.map { it.displayDate(now, zone) }.distinct()
+                assertTrue("Missing date/event rows (async=$asynchronous): ${describe(root)}", list.count == events.size + dates.size)
                 val rowLabels = (0 until list.count).flatMap { index ->
                     textViews(list.adapter.getView(index, null, list)).map { it.text.toString() }
                 }
-                for (index in 0..2) assertTrue("Schedule missing: $rowLabels", "示例安排 $index" in rowLabels)
+                for (event in events) assertTrue("Schedule missing: $rowLabels", event.title in rowLabels)
+                for (date in dates) assertTrue("Date missing: $rowLabels", dateTitle(date, today) in rowLabels)
+                assertTrue("Flow type missing: $rowLabels", rowLabels.any { it.endsWith("· 规划任务") })
             }
         }
     }

@@ -8,6 +8,7 @@ import 'package:litechron/model/period.dart';
 import 'package:litechron/model/scholar.dart';
 import 'package:litechron/utils/utils.dart';
 import 'package:litechron/pigeon/flow_messenger.dart';
+import 'package:litechron/worker/upcoming_widget.dart';
 
 class FlowController extends GetxController {
   final scholar = Get.find<Rx<Scholar>>(tag: 'scholar');
@@ -371,6 +372,7 @@ class FlowController extends GetxController {
       saveFlowListToDb();
     }
     _nextWalkAt = _computeNextWalkAt(DateTime.now());
+    UpcomingWidgetSync.flowListPrepared();
   }
 
   /* 同步Flow页面的任务进度到Task页面 */
