@@ -127,8 +127,10 @@ void main() {
           .first);
       expect(semantics.properties.selected, isTrue);
 
-      // 明细页打开期间继续使用首页控制器的时钟，返回后统计同步变化。
+      // 模拟离开应用数小时后恢复，首页和明细页共用的时钟应立即补查。
+      fixture.controller.didChangeAppLifecycleState(AppLifecycleState.paused);
       fixture.now = fixture.now.add(const Duration(hours: 4));
+      fixture.controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
       await tester.pump(const Duration(seconds: 1));
       await tester.pump();
       final updatedCount = fixture.controller.todosFor(filter).length;

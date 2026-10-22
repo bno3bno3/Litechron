@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:get/get.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:litechron/database/database_helper.dart';
 
@@ -9,10 +10,30 @@ enum UpdateCheckResult { available, upToDate, skipped, failed }
 class Fuse {
   late DateTime lastUpdateTime;
 
-  /// 与 pubspec.yaml 的 version 保持一致，由 test/fuse_version_test.dart 校验
   static const bool isBeta = false;
-  static const version = [1, 0, 9];
-  static const build = 10;
+  static late List<int> _version;
+  static late int _build;
+  static late String _versionName;
+
+  static List<int> get version => _version;
+  static int get build => _build;
+
+  /// 在打开 Hive 前读取安装包版本，恢复更新缓存时也使用当前安装版本。
+  static Future<void> initializeVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    // Android development 变体会在版本名后追加 -dev，比较时只取数字部分。
+    final match =
+        RegExp(r'^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$').firstMatch(info.version);
+    final buildNumber = int.tryParse(info.buildNumber);
+    if (match == null || buildNumber == null || buildNumber < 0) {
+      throw const FormatException('Invalid installed app version');
+    }
+    _version = List<int>.unmodifiable(
+        [1, 2, 3].map((i) => int.parse(match.group(i)!)));
+    _build = buildNumber;
+    _versionName = info.version;
+  }
+
   List<int>? remoteVersion;
   int? remoteBuild;
   bool hasNewVersion = false;
@@ -35,7 +56,7 @@ class Fuse {
   Future<UpdateCheckResult>? _pendingCheck;
   bool _manualCheckRequested = false;
 
-  String get displayVersion => version.join('.') + (isBeta ? ' beta' : '');
+  String get displayVersion => _versionName + (isBeta ? ' beta' : '');
 
   String get downloadUrl => remoteUrl ?? releaseUrl;
 

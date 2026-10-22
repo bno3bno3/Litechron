@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:get/get.dart';
 
 import 'package:litechron/model/semester.dart';
@@ -9,8 +7,6 @@ import 'package:litechron/model/exam.dart';
 class ExamListController extends GetxController {
   final _scholar = Get.find<Rx<Scholar>>(tag: 'scholar');
   late final RxInt semesterIndex;
-  final Rx<Duration> _durationToLastUpdate = const Duration().obs;
-  Timer? _timer;
 
   ExamListController({required String initialName}) {
     semesterIndex = semesters.indexWhere((e) => e.name == initialName).obs;
@@ -18,11 +14,15 @@ class ExamListController extends GetxController {
 
   Semester get semester => _scholar.value.semesters[semesterIndex.value];
   List<Semester> get semesters => _scholar.value.semesters;
-  Duration get durationToLastUpdate => _durationToLastUpdate.value;
+  // 当前页面不展示更新时间，按需读取即可，无需维持一个定时器。
+  Duration get durationToLastUpdate =>
+      DateTime.now().difference(_scholar.value.lastUpdateTimeCourse);
 
   List<List<Exam>> get exams {
-    semester.sortExams();
-    var exams = semester.exams.fold(<List<Exam>>[], (previousValue, element) {
+    // 展示排序使用副本，避免改变共享考试顺序并使 Semester.periods 缓存失效。
+    final sorted = List<Exam>.of(semester.exams)
+      ..sort((a, b) => a.time.first.compareTo(b.time.first));
+    return sorted.fold(<List<Exam>>[], (previousValue, element) {
       if (previousValue.isEmpty) {
         previousValue.add([element]);
       } else {
@@ -36,22 +36,5 @@ class ExamListController extends GetxController {
       }
       return previousValue;
     });
-    exams.sort((a, b) => a[0].time[0].compareTo(b[0].time[0]));
-    return exams;
-  }
-
-  @override
-  void onReady() {
-    super.onReady();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _durationToLastUpdate.value =
-          DateTime.now().difference(_scholar.value.lastUpdateTimeCourse);
-    });
-  }
-
-  @override
-  void onClose() {
-    _timer?.cancel();
-    super.onClose();
   }
 }

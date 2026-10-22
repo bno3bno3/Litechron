@@ -1,18 +1,23 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:litechron/model/practice_details.dart';
 import 'package:litechron/model/practice_score_item.dart';
 import 'package:litechron/model/scholar.dart';
+import 'package:litechron/utils/refresh_time.dart';
 
-class PracticeScoreController extends GetxController {
+class PracticeScoreController extends GetxController
+    with WidgetsBindingObserver {
   final Rx<Scholar> _scholar;
   final RxInt category;
   final filter = PracticeFilter.all.obs;
   final details = const PracticeDetails().obs;
   final refreshing = false.obs;
-  final now = DateTime.now().obs;
+  final DateTime Function() _now;
+  late final now = _now().obs;
   Timer? _timer;
+  bool _paused = false;
   Worker? _accountWorker;
   Scholar? _owner;
   String? _account;
@@ -20,8 +25,12 @@ class PracticeScoreController extends GetxController {
   int _generation = 0;
   Future<String?>? _refresh;
 
-  PracticeScoreController({required int initialCategory, Rx<Scholar>? scholar})
+  PracticeScoreController(
+      {required int initialCategory,
+      Rx<Scholar>? scholar,
+      DateTime Function()? now})
       : _scholar = scholar ?? Get.find<Rx<Scholar>>(tag: 'scholar'),
+        _now = now ?? DateTime.now,
         category = initialCategory.obs;
 
   Scholar get scholar => _scholar.value;
@@ -40,11 +49,31 @@ class PracticeScoreController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     _syncAccount();
     _accountWorker = ever(_scholar, (_) => _syncAccount());
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      now.value = DateTime.now();
-    });
+  }
+
+  void _updateClock() {
+    _timer?.cancel();
+    now.value = _now();
+    final updatedAt = details.value.updatedAt;
+    if (_paused || isClosed || updatedAt == null) return;
+    final next = nextMinuteChange(updatedAt, now.value, clampNegative: true);
+    _timer = Timer(next.difference(now.value), _updateClock);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _paused = false;
+      _updateClock();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      _paused = true;
+      _timer?.cancel();
+    }
   }
 
   void _syncAccount() {
@@ -62,6 +91,7 @@ class PracticeScoreController extends GetxController {
     filter.value = PracticeFilter.all;
     // Reading local cache never authenticates or issues a network request.
     details.value = scholar.cachedPracticeDetails;
+    _updateClock();
   }
 
   void selectCategory(int value) {
@@ -86,7 +116,6 @@ class PracticeScoreController extends GetxController {
       final result = await owner.getPracticeDetails();
       if (!_isCurrent(generation, owner, account)) return null;
       details.value = result;
-      now.value = DateTime.now();
       return result.error;
     } on Object {
       if (!_isCurrent(generation, owner, account)) return null;
@@ -95,6 +124,7 @@ class PracticeScoreController extends GetxController {
       return error;
     } finally {
       if (_isCurrent(generation, owner, account)) {
+        _updateClock();
         refreshing.value = false;
         _refresh = null;
       }
@@ -110,6 +140,8 @@ class PracticeScoreController extends GetxController {
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _paused = true;
     _generation++;
     _timer?.cancel();
     _accountWorker?.dispose();

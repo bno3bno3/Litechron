@@ -47,20 +47,6 @@ class DatabaseHelper {
     fuseBox = await Hive.openBox(dbFuse);
     customGpaBox = await Hive.openBox(dbCustomGpa);
     secureStorage = const FlutterSecureStorage();
-    // Migrate all items without groupID
-    var secureStorageItems = await secureStorage.readAll(
-        iOptions: const IOSOptions(
-            accessibility: KeychainAccessibility.first_unlock,
-            accountName: 'Litechron'));
-    await Future.forEach(secureStorageItems.entries, (e) async {
-      await secureStorage.delete(
-          key: e.key,
-          iOptions: const IOSOptions(
-              accessibility: KeychainAccessibility.first_unlock,
-              accountName: 'Litechron'));
-      await secureStorage.write(
-          key: e.key, value: e.value, iOptions: secureStorageIOSOptions);
-    });
     // 多账号迁移：把既有单账号播种进账号列表，并把后台推送状态键复制到
     // 账号命名空间。最后写 accountList 作为提交点，中途崩溃则下次整体重跑。
     var accountListRaw = await secureStorage.read(
@@ -325,16 +311,16 @@ class DatabaseHelper {
   }
 
   Future<void> setScholar(Scholar scholar) async {
+    await scholarBox.put('user', scholar);
+  }
+
+  /// 仅在登录或提交账号变更时更新后台刷新与校园卡读取的活动凭据。
+  Future<void> setActiveCredentials(String? username, String? password) async {
     await Future.wait([
-      scholarBox.put('user', scholar),
       secureStorage.write(
-          key: kUsername,
-          value: scholar.username,
-          iOptions: secureStorageIOSOptions),
+          key: kUsername, value: username, iOptions: secureStorageIOSOptions),
       secureStorage.write(
-          key: kPassword,
-          value: scholar.password,
-          iOptions: secureStorageIOSOptions)
+          key: kPassword, value: password, iOptions: secureStorageIOSOptions)
     ]);
   }
 
@@ -370,16 +356,8 @@ class DatabaseHelper {
     // 首元素为当前账号，镜像到 legacy 键位，后台刷新与 e-card 组件按原键读取；
     // 空表不动镜像键，由登出流程自行清理
     if (accounts.isNotEmpty) {
-      await Future.wait([
-        secureStorage.write(
-            key: kUsername,
-            value: accounts.first['username'],
-            iOptions: secureStorageIOSOptions),
-        secureStorage.write(
-            key: kPassword,
-            value: accounts.first['password'],
-            iOptions: secureStorageIOSOptions),
-      ]);
+      await setActiveCredentials(
+          accounts.first['username'], accounts.first['password']);
     }
   }
 

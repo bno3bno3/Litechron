@@ -1,5 +1,5 @@
 import 'package:litechron/model/task.dart';
-import 'package:litechron/utils/utils.dart';
+import 'package:litechron/utils/task_updates.dart';
 import 'package:get/get.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:litechron/model/period.dart';
@@ -11,6 +11,26 @@ enum CalendarViewMode {
   schedule,
 }
 
+/// 月历只读取绘制标记所需的数据，避免反复复制可编辑的 Period。
+class CalendarEventMarker {
+  final PeriodType type;
+  final int hour;
+  final String? colorUid;
+
+  CalendarEventMarker._(Period event)
+      : type = event.type,
+        hour = event.startTime.hour,
+        colorUid = event.fromFromUid ?? event.fromUid;
+}
+
+class _CalendarDayEvents {
+  final List<Period> periods;
+  late final markers = List<CalendarEventMarker>.unmodifiable(
+      periods.map(CalendarEventMarker._));
+
+  _CalendarDayEvents(this.periods);
+}
+
 class CalendarController extends GetxController {
   final selectedDay = DateTime.now().obs;
   final focusedDay = DateTime.now().obs;
@@ -19,6 +39,12 @@ class CalendarController extends GetxController {
   final scholar = Get.find<Rx<Scholar>>(tag: 'scholar');
   final taskList = Get.find<RxList<Task>>(tag: 'taskList');
   final viewMode = CalendarViewMode.calendar.obs;
+  Worker? _scholarWorker;
+  Worker? _taskWorker;
+  List<Task> _fixedTasks = [];
+  // 容纳相邻三个月的日期页，并限制长期翻月产生的缓存。
+  static const _maxCachedDays = 128;
+  final _dayEvents = <DateTime, _CalendarDayEvents>{};
 
   static List<String> numToChinese = ['一', '二', '三', '四', '五', '六', '七', '八'];
 
@@ -40,23 +66,44 @@ class CalendarController extends GetxController {
 
   @override
   void onInit() {
+    _refreshFixedTasks();
     refreshEvents();
-    ever(scholar, (callback) => refreshEvents());
+    _scholarWorker = ever(scholar, (callback) => refreshEvents());
+    _taskWorker = ever(taskList, (_) {
+      if (TaskUpdates.isProgressOnly) return;
+      _refreshFixedTasks();
+      _dayEvents.clear();
+      events.refresh();
+    });
     super.onInit();
   }
 
+  @override
+  void onClose() {
+    _scholarWorker?.dispose();
+    _taskWorker?.dispose();
+    _dayEvents.clear();
+    super.onClose();
+  }
+
   void refreshEvents() {
-    events.clear();
-    Set<DateTime> keySet = {};
-    for (var element in Get.find<Rx<Scholar>>(tag: 'scholar').value.periods) {
-      DateTime chop = chopDate(element.startTime);
-      if (events[chop] == null) events[chop] = <Period>[];
-      events[chop]!.add(element);
-      keySet.add(chop);
+    final nextEvents = <DateTime, List<Period>>{};
+    for (final period in scholar.value.periods) {
+      (nextEvents[chopDate(period.startTime)] ??= []).add(period.copyWith());
     }
-    for (var i in keySet) {
-      events[i]!.sort((a, b) => a.startTime.compareTo(b.startTime));
+    for (final periods in nextEvents.values) {
+      periods.sort((a, b) => a.startTime.compareTo(b.startTime));
     }
+    _dayEvents.clear();
+    // 先完成索引和排序，再一次性通知，避免暴露空表或未完成的日期。
+    events.assignAll(nextEvents);
+  }
+
+  void _refreshFixedTasks() {
+    _fixedTasks = taskList
+        .where((task) =>
+            task.type == TaskType.fixed || task.type == TaskType.fixedlegacy)
+        .toList(growable: false);
   }
 
   DateTime chopDate(DateTime day) {
@@ -64,24 +111,39 @@ class CalendarController extends GetxController {
   }
 
   List<Period> getEventsForDay(DateTime day) {
-    DateTime chop = chopDate(day);
-    var eventsOfDay = <Period>[];
-    if (events[chop] != null) {
-      for (var event in events[chop]!) {
-        eventsOfDay.add(event.copyWith());
-      }
+    // 详情/编辑使用独立副本，不能修改缓存或学业模型中的共享对象。
+    return _getDayEvents(day).periods.map((event) => event.copyWith()).toList();
+  }
+
+  List<CalendarEventMarker> Function(DateTime) get markerLoader {
+    // TableCalendar 延迟调用 eventLoader，依赖必须在父 Obx 构建时登记。
+    events();
+    return getMarkersForDay;
+  }
+
+  List<CalendarEventMarker> getMarkersForDay(DateTime day) =>
+      _getDayEvents(day).markers;
+
+  _CalendarDayEvents _getDayEvents(DateTime day) {
+    final chop = chopDate(day);
+    // 命中缓存时也读取 Rx，保证选中日期的详情会随数据变动而刷新。
+    final academicEvents = events[chop];
+    final cached = _dayEvents.remove(chop);
+    if (cached != null) {
+      _dayEvents[chop] = cached;
+      return cached;
     }
-    for (var deadline in taskList) {
-      if (deadline.type == TaskType.fixed ||
-          deadline.type == TaskType.fixedlegacy) {
-        List<Period> periods = deadline.getPeriodOfDay(dateOnly(day));
-        for (var p in periods) {
-          eventsOfDay.add(p);
-        }
-      }
+    final eventsOfDay = <Period>[...?academicEvents];
+    for (final task in _fixedTasks) {
+      eventsOfDay.addAll(task.getPeriodOfDay(chop));
     }
     eventsOfDay.sort((a, b) => a.startTime.compareTo(b.startTime));
-    return eventsOfDay;
+    final result = _CalendarDayEvents(eventsOfDay);
+    _dayEvents[chop] = result;
+    if (_dayEvents.length > _maxCachedDays) {
+      _dayEvents.remove(_dayEvents.keys.first);
+    }
+    return result;
   }
 
   void toggleViewMode() {

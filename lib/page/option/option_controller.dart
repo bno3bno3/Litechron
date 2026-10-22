@@ -41,6 +41,7 @@ class OptionController extends GetxController {
 
   // 日历管理器
   late final CalendarToSystemManager _calendarManager;
+  Worker? _courseMappingWorker;
 
   @override
   void onInit() {
@@ -64,12 +65,18 @@ class OptionController extends GetxController {
       }
     }
 
-    ever(courseIdMappingList, (value) {
+    _courseMappingWorker = ever(courseIdMappingList, (value) {
       _db.setCourseIdMappingList(value);
     });
 
     // 初始化时检查日历权限和同步状态（不显示提示框）
     _calendarManager.checkInitialCalendarSyncStatus();
+  }
+
+  @override
+  void onClose() {
+    _courseMappingWorker?.dispose();
+    super.onClose();
   }
 
   Duration get workTime => _option.workTime.value;

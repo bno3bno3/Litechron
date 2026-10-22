@@ -57,22 +57,24 @@ class SearchPage extends StatelessWidget {
                       ],
                     )
                   ]))),
-          Obx(() => SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => Container(
-                    padding: index == 0
-                        ? const EdgeInsets.only(
-                            top: 0, bottom: 5, left: 16, right: 16)
-                        : const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 5),
-                    child: CourseBriefCard(
-                      course: _searchController.courseResult[index],
-                      allowDirect: true,
-                    ),
+          Obx(() {
+            final courses = _searchController.courseResult;
+            return SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => Container(
+                  padding: index == 0
+                      ? const EdgeInsets.only(
+                          top: 0, bottom: 5, left: 16, right: 16)
+                      : const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+                  child: CourseBriefCard(
+                    course: courses[index],
+                    allowDirect: true,
                   ),
-                  childCount: _searchController.courseResult.length,
                 ),
-              )),
+                childCount: courses.length,
+              ),
+            );
+          }),
         ])));
   }
 }

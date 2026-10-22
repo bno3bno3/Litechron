@@ -12,10 +12,15 @@ import 'grade_detail_controller.dart';
 import 'package:litechron/utils/gpa_helper.dart';
 
 class GradeDetailPage extends StatelessWidget {
-  final _gradeDetailController = Get.put(GradeDetailController());
+  late final GradeDetailController _gradeDetailController;
 
   GradeDetailPage({super.key}) {
-    _gradeDetailController.init();
+    if (Get.isRegistered<GradeDetailController>()) {
+      _gradeDetailController = Get.find<GradeDetailController>()
+        ..resetPageState();
+    } else {
+      _gradeDetailController = Get.put(GradeDetailController());
+    }
   }
 
   int getPairedSemesterIndex(int idx) {

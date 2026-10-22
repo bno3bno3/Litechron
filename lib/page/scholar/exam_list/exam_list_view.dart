@@ -35,7 +35,7 @@ class _ExamListPageState extends State<ExamListPage> {
 
   @override
   void dispose() {
-    // 离开页面即释放 controller，onClose 里会取消定时器
+    // 离开页面即释放 controller。
     Get.delete<ExamListController>();
     super.dispose();
   }
@@ -338,19 +338,21 @@ class _ExamListPageState extends State<ExamListPage> {
                     left: 16, right: 16, bottom: 10, top: 10),
                 child: _semesterPicker(context)),
           ),
-          Obx(() => SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => Container(
-                    padding: index == 0
-                        ? const EdgeInsets.only(
-                            top: 0, bottom: 5, left: 16, right: 16)
-                        : const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 5),
-                    child: _examCard(context, _examListController.exams[index]),
-                  ),
-                  childCount: _examListController.exams.length,
+          Obx(() {
+            final exams = _examListController.exams;
+            return SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => Container(
+                  padding: index == 0
+                      ? const EdgeInsets.only(
+                          top: 0, bottom: 5, left: 16, right: 16)
+                      : const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+                  child: _examCard(context, exams[index]),
                 ),
-              ))
+                childCount: exams.length,
+              ),
+            );
+          })
         ],
       ),
     );

@@ -7,10 +7,14 @@ import 'package:litechron/model/task.dart';
 import 'package:litechron/model/period.dart';
 import 'package:litechron/model/scholar.dart';
 import 'package:litechron/utils/utils.dart';
+import 'package:litechron/utils/task_updates.dart';
 import 'package:litechron/pigeon/flow_messenger.dart';
 import 'package:litechron/worker/upcoming_widget.dart';
 
 class FlowController extends GetxController {
+  FlowController({DateTime Function()? now}) : _now = now ?? DateTime.now;
+
+  final DateTime Function() _now;
   final scholar = Get.find<Rx<Scholar>>(tag: 'scholar');
   final flowList = Get.find<RxList<Period>>(tag: 'flowList');
   final flowListLastUpdate = Get.find<Rx<DateTime>>(tag: 'flowListLastUpdate');
@@ -19,16 +23,18 @@ class FlowController extends GetxController {
   final _db = Get.find<DatabaseHelper>(tag: 'db');
   late var _scholarFlowList = scholar.value.periods;
   var _currentScholarFlowCursor = -1;
-  var timeNow = DateTime.now().obs;
+  late final Rx<DateTime> timeNow = _now().obs;
   final _flowMessenger = FlowMessenger();
   Timer? _timer;
+  Worker? _scholarWorker;
+  Worker? _taskWorker;
   // 数据变化时置位，下一秒执行完整 walk；平时按 _nextWalkAt 的时间边界调度
   bool _walkPending = false;
   DateTime _nextWalkAt = DateTime.fromMillisecondsSinceEpoch(0);
   int _lastFlowSig = 0;
   DateTime _lastAccrualSaveAt = DateTime.fromMillisecondsSinceEpoch(0);
 
-  bool get isDuringFlow => flowList.first.startTime.isBefore(DateTime.now());
+  bool get isDuringFlow => flowList.first.startTime.isBefore(_now());
 
   @override
   void onInit() {
@@ -42,12 +48,14 @@ class FlowController extends GetxController {
     _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) => _onTick());
 
     // 当“学业”页面有更新（例如出现新课程），更新基本Flow列表
-    ever(scholar, (callback) {
+    _scholarWorker = ever(scholar, (callback) {
       refreshScholarFlowList();
       _walkPending = true;
       refreshWidget();
     });
-    ever(taskList, (callback) {
+    _taskWorker = ever(taskList, (callback) {
+      // GetX 同步派发 refresh；自身进度通知仍更新 UI，但不再触发完整 walk。
+      if (TaskUpdates.isProgressOnly) return;
       _walkPending = true;
       refreshWidget();
     });
@@ -56,7 +64,7 @@ class FlowController extends GetxController {
   }
 
   void _onTick() {
-    final now = DateTime.now();
+    final now = _now();
     timeNow.value = now;
     if (_walkPending || !now.isBefore(_nextWalkAt)) {
       _walkPending = false;
@@ -70,6 +78,8 @@ class FlowController extends GetxController {
   @override
   void onClose() {
     _timer?.cancel();
+    _scholarWorker?.dispose();
+    _taskWorker?.dispose();
     super.onClose();
   }
 
@@ -322,7 +332,7 @@ class FlowController extends GetxController {
     });
 
     /* 同步Flow页面的任务进度到Task页面 */
-    _syncFlowProgress(DateTime.now());
+    _syncFlowProgress(_now());
 
     /* 重新添加最近48h内的至多5节课程（防止Flow页面太乱）*/
     _refreshScholarCursor();
@@ -335,7 +345,7 @@ class FlowController extends GetxController {
                 e.uid == _scholarFlowList[i + _currentScholarFlowCursor].uid) &&
             _scholarFlowList[i + _currentScholarFlowCursor]
                     .endTime
-                    .difference(DateTime.now())
+                    .difference(_now())
                     .inMinutes <
                 2880) {
           flowList
@@ -347,7 +357,7 @@ class FlowController extends GetxController {
     /* 每个固定日程添加至多5项 */
     for (var x in taskList) {
       if (x.type == TaskType.fixed) {
-        DateTime time = DateTime.now();
+        DateTime time = _now();
         DateTime? last;
         for (int i = 0; i < 5; i++) {
           Period? period = x.deadlineOfTime(time, predicting: true);
@@ -371,13 +381,15 @@ class FlowController extends GetxController {
       _lastFlowSig = sig;
       saveFlowListToDb();
     }
-    _nextWalkAt = _computeNextWalkAt(DateTime.now());
+    _nextWalkAt = _computeNextWalkAt(_now());
     UpcomingWidgetSync.flowListPrepared();
   }
 
   /* 同步Flow页面的任务进度到Task页面 */
   void _syncFlowProgress(DateTime now) {
     var didAccrue = false;
+    Set<Period>? expiredPeriods;
+    var didChangeStatus = false;
     for (var i = 0; i < flowList.length; i++) {
       if (flowList[i].startTime.isAfter(now)) break;
       if (flowList[i].type == PeriodType.flow) {
@@ -394,21 +406,30 @@ class FlowController extends GetxController {
 
         for (var deadline in taskList) {
           if (deadline.uid != flowList[i].fromUid) continue;
+          final oldStatus = deadline.status;
           deadline.updateTimeSpent(
               deadline.timeSpent - prevProgress + currProgress);
+          didChangeStatus |= deadline.status != oldStatus;
         }
         didAccrue = true;
-        taskList.refresh();
-        flowList.refresh();
       }
       if (flowList[i].endTime.isBefore(now)) {
-        flowList.removeAt(i);
-        i--;
-        flowList.refresh();
-        taskList.refresh();
-        // 跨过了结束边界，下一秒做一次完整 walk（补课程、重算下个边界）
-        _walkPending = true;
+        (expiredPeriods ??= <Period>{}).add(flowList[i]);
       }
+    }
+    if (didAccrue || expiredPeriods != null) {
+      TaskUpdates.refreshProgress(taskList);
+      if (expiredPeriods != null) {
+        // 本轮结束后统一移除、通知，避免每移除一项就刷新整张列表。
+        flowList.removeWhere(expiredPeriods.contains);
+      } else {
+        flowList.refresh();
+      }
+    }
+    if (expiredPeriods != null || didChangeStatus) {
+      // 时间边界或任务状态改变仍需补课程、重算下个边界。
+      _walkPending = true;
+      refreshWidget();
     }
     // timeSpent（存于任务表）与 lastUpdateTime（存于规划表）必须成对落盘，
     // 否则杀进程重启后按墙钟回填会多算或少算，进行中每 15 秒同步一次快照。
@@ -460,7 +481,7 @@ class FlowController extends GetxController {
 
   void _refreshScholarCursor() {
     _currentScholarFlowCursor =
-        _scholarFlowList.indexWhere((e) => e.endTime.isAfter(DateTime.now()));
+        _scholarFlowList.indexWhere((e) => e.endTime.isAfter(_now()));
   }
 
   void refreshWidget() {
@@ -492,7 +513,7 @@ class FlowController extends GetxController {
             ))
         .toList());
     for (var task in taskList.where((e) => e.type == TaskType.fixed)) {
-      DateTime time = DateTime.now();
+      DateTime time = _now();
       DateTime? last;
       for (int i = 0; i < 5; i++) {
         Period? period = task.deadlineOfTime(time, predicting: true);

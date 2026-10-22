@@ -4,30 +4,33 @@ import 'package:litechron/model/course.dart';
 
 class SearchPageController extends GetxController {
   final _scholar = Get.find<Rx<Scholar>>(tag: 'scholar');
-  late List<Course> allCourses;
+  final allCourses = <Course>[].obs;
+  Worker? _scholarWorker;
 
   RxString searchWord = ''.obs;
   List<Course> get courseResult {
-    if (searchWord.value == '') {
+    final word = searchWord.value;
+    if (word.isEmpty) {
       return <Course>[];
     }
-    return allCourses.where((e) => e.name.contains(searchWord.value)).toList();
+    return allCourses.where((e) => e.name.contains(word)).toList();
   }
 
   @override
   void onInit() {
-    allCourses = _scholar.value.semesters.fold(<Course>[], (p, e) {
-      p.addAll(e.courses.values);
-      return p;
-    });
-    ever(_scholar, (callback) => refreshAllCourses());
+    refreshAllCourses();
+    _scholarWorker = ever(_scholar, (callback) => refreshAllCourses());
     super.onInit();
   }
 
+  @override
+  void onClose() {
+    _scholarWorker?.dispose();
+    super.onClose();
+  }
+
   void refreshAllCourses() {
-    allCourses = _scholar.value.semesters.fold(<Course>[], (p, e) {
-      p.addAll(e.courses.values);
-      return p;
-    });
+    allCourses.assignAll(
+        _scholar.value.semesters.expand((semester) => semester.courses.values));
   }
 }

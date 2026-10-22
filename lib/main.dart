@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' show Colors;
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -15,12 +15,16 @@ import 'package:litechron/model/option.dart';
 import 'package:litechron/page/home_page.dart';
 import 'package:litechron/page/option/ecard_pay_page.dart';
 import 'package:litechron/worker/ecard_widget_messenger.dart';
+import 'package:litechron/worker/fuse.dart';
 import 'package:litechron/worker/refresh_lock.dart';
 import 'package:litechron/worker/upcoming_widget.dart';
 import 'package:litechron/database/database_helper.dart';
 import 'package:litechron/utils/global.dart';
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Fuse.initializeVersion();
+
   // 初始化数据库
   await Hive.initFlutter();
   RefreshLock.enabled = true;
@@ -36,7 +40,6 @@ void main() async {
   Get.put(db.getOption(), tag: 'option');
   Get.put(db.getFuse().obs, tag: 'fuse');
 
-  UpcomingWidgetSync.start();
   runApp(const LitechronApp());
 
   var scholar = Get.find<Rx<Scholar>>(tag: 'scholar');
@@ -65,10 +68,14 @@ class LitechronApp extends StatefulWidget {
 
 class _LitechronAppState extends State<LitechronApp>
     with WidgetsBindingObserver {
+  StreamSubscription<Uri>? _appLinksSubscription;
+  Worker? _brightnessWorker;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    UpcomingWidgetSync.start();
 
     // 监听AppLinks，用于跳转至付款码页面
     _initAppLinks();
@@ -83,7 +90,15 @@ class _LitechronAppState extends State<LitechronApp>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _appLinksSubscription?.cancel();
+    _brightnessWorker?.dispose();
+    UpcomingWidgetSync.stop();
     super.dispose();
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    if (Platform.isAndroid) _updateStatusBar();
   }
 
   @override
@@ -134,7 +149,7 @@ class _LitechronAppState extends State<LitechronApp>
 
   void _initAppLinks() {
     final appLinks = AppLinks();
-    appLinks.uriLinkStream.listen((uri) {
+    _appLinksSubscription = appLinks.uriLinkStream.listen((uri) {
       final scheme = Platform.isAndroid && appFlavor == 'development'
           ? 'litechron-dev'
           : 'litechron';
@@ -153,36 +168,20 @@ class _LitechronAppState extends State<LitechronApp>
   void _initStatusBar() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     var brightnessMode = Get.find<Option>(tag: 'option').brightnessMode;
-    var dispatcher = SchedulerBinding.instance.platformDispatcher;
+    _brightnessWorker = ever(brightnessMode, (_) => _updateStatusBar());
+    _updateStatusBar();
+  }
 
-    ever(brightnessMode, (mode) {
-      if (mode == BrightnessMode.system) {
-        SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-          statusBarIconBrightness:
-              dispatcher.platformBrightness == Brightness.light
-                  ? Brightness.dark
-                  : Brightness.light,
-          systemNavigationBarColor: Colors.transparent,
-        ));
-        dispatcher.onPlatformBrightnessChanged = () {
-          SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-            statusBarIconBrightness:
-                dispatcher.platformBrightness == Brightness.light
-                    ? Brightness.dark
-                    : Brightness.light,
-            systemNavigationBarColor: Colors.transparent,
-          ));
-        };
-      } else {
-        dispatcher.onPlatformBrightnessChanged = null;
-        SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-          statusBarIconBrightness:
-              mode == BrightnessMode.light ? Brightness.dark : Brightness.light,
-          systemNavigationBarColor: Colors.transparent,
-        ));
-      }
-    });
-    brightnessMode.refresh();
+  void _updateStatusBar() {
+    final mode = Get.find<Option>(tag: 'option').brightnessMode.value;
+    final isLight = mode == BrightnessMode.system
+        ? WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+            Brightness.light
+        : mode == BrightnessMode.light;
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarIconBrightness: isLight ? Brightness.dark : Brightness.light,
+      systemNavigationBarColor: Colors.transparent,
+    ));
   }
 
   void _initNotification() {

@@ -14,6 +14,12 @@ Litechron 基于 [Celechron](https://github.com/Celechron/Celechron) 二次开�
 
 本项目遵循 [GPLv3](./LICENSE) 协议开源。
 
+## 支持平台
+
+本项目仅面向 **Android（安卓）** 和 **无需依赖卓易通即可运行 Litechron 的鸿蒙环境** 提供服务、适配与维护，不提供 iOS、macOS、Windows、Linux 等平台的支持，也不将卓易通作为鸿蒙适配方案。
+
+当前仓库提供 Android APK 构建；鸿蒙设备的可用性以能够无需卓易通直接安装、运行该 APK 为准。这不代表本项目已提供原生鸿蒙安装包。仓库中的其他平台目录和代码是上游遗留，不代表对应平台受到支持。
+
 ## 构建
 
 ```
@@ -22,6 +28,11 @@ flutter build apk --release
 ```
 
 发布版本见 [Releases](https://github.com/bno3bno3/Litechron/releases)。
+
+本地版本号只需修改 `pubspec.yaml` 中的 `version`（如 `1.0.9+11`）。
+App 内版本显示和更新检查会自动读取安装包的版本号与构建号，也支持
+`--build-name`、`--build-number` 构建参数。只有对外发布新版本时，才需要
+另行更新 `remote/version.json`，供已安装的 App 检查更新。
 
 ### Android 稳定版与测试版共存
 

@@ -107,7 +107,7 @@ class CalendarPage extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(
                             bottom: 5, left: 12, right: 12),
-                        child: TableCalendar(
+                        child: TableCalendar<CalendarEventMarker>(
                           locale: 'zh_CN',
                           firstDay: DateTime.utc(2022, 9, 1),
                           lastDay: DateTime.utc(2030, 12, 31),
@@ -150,9 +150,7 @@ class CalendarPage extends StatelessWidget {
                           onFormatChanged: (format) {
                             _calendarController.calendarFormat.value = format;
                           },
-                          eventLoader: (day) {
-                            return _calendarController.getEventsForDay(day);
-                          },
+                          eventLoader: _calendarController.markerLoader,
                           calendarStyle: CalendarStyle(
                             markersAnchor: -0.1,
                             markersMaxCount: 10,
@@ -177,7 +175,8 @@ class CalendarPage extends StatelessWidget {
                             defaultTextStyle:
                                 CupertinoTheme.of(context).textTheme.textStyle,
                           ),
-                          calendarBuilders: const CalendarBuilders(
+                          calendarBuilders:
+                              const CalendarBuilders<CalendarEventMarker>(
                             singleMarkerBuilder: singleMarkerBuilder,
                           ),
                         ),
@@ -493,16 +492,16 @@ class CalendarPage extends StatelessWidget {
     );
   }
 
-  static Widget singleMarkerBuilder(context, day, Period event) {
+  static Widget singleMarkerBuilder(context, day, CalendarEventMarker event) {
     if (event.type == PeriodType.virtual) {
       return const SizedBox.shrink();
     }
 
     Color color = CupertinoColors.systemPink;
     if (event.type == PeriodType.classes) {
-      color = TimeColors.colorFromHour(event.startTime.hour);
+      color = TimeColors.colorFromHour(event.hour);
     } else if (event.type == PeriodType.user) {
-      color = UidColors.colorFromUid(event.fromFromUid ?? event.fromUid);
+      color = UidColors.colorFromUid(event.colorUid);
     }
 
     double size = 4.5;

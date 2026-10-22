@@ -4,7 +4,11 @@ This file gives Claude Code the project context needed to work safely in this re
 
 ## Project Overview
 
-Litechron is a Flutter/Dart cross-platform app for Zhejiang University students, forked from Celechron and rebranded so it can be installed alongside the official app. It combines schedule viewing, course and exam data, task/DDL management, GPA and grade display, homework reminders from Learning in ZJU, calendar export/sync, and platform widgets/live activities.
+Litechron is a Flutter/Dart app for Zhejiang University students, forked from Celechron and rebranded so it can be installed alongside the official app. It combines schedule viewing, course and exam data, task/DDL management, GPA and grade display, homework reminders from Learning in ZJU, calendar export/sync, and platform widgets.
+
+平台范围：本项目仅为 **Android（安卓）** 和 **不依赖卓易通运行 Litechron 的鸿蒙环境** 提供服务、适配与维护。iOS、macOS、Windows、Linux 等均不在支持范围内；不得将卓易通作为鸿蒙适配方案。当前仓库提供 Android APK 构建，鸿蒙设备需能够无需卓易通直接安装、运行该 APK；不能据此宣称已有原生鸿蒙安装包或已验证的原生鸿蒙适配。
+
+仓库中的其他平台目录、平台分支、Pigeon/Swift 桥接和 Live Activity 等属于上游遗留，不代表维护承诺。新增功能、优化、依赖选型与验证均以上述支持范围为准；清理遗留实现时，先检查 Android 和受支持鸿蒙环境是否仍依赖其共享代码。
 
 The app is stateful and data-heavy. Most features depend on persisted Hive data, secure credentials, GetX global state, and network scraping of ZJU services. Prefer small, behavior-preserving changes unless the requested task explicitly calls for a broader refactor.
 
@@ -18,7 +22,7 @@ The app is stateful and data-heavy. Most features depend on persisted Hive data,
 - Credential and background-task flags: `flutter_secure_storage`.
 - Background refresh: `workmanager` from `bno3bno3/Litechron-flutter_workmanager` (a fork of Celechron's fork) pinned to a commit in `pubspec.yaml`.
 - Notifications: `flutter_local_notifications`.
-- Native bridge/widget data transfer: Pigeon files under `lib/pigeon/`, plus iOS/Android platform code.
+- Native integration for supported builds: Android platform code and MethodChannels; Pigeon files under `lib/pigeon/` and iOS bridges are legacy implementations.
 
 Useful commands:
 
@@ -42,7 +46,7 @@ There is no obvious dedicated test directory in the current tree, so use `flutte
 - `lib/algorithm/arrange.dart`: scheduling/allocation algorithm used by Flow.
 - `lib/worker/`: background refresh, update checking, e-card widget sync, and flow/widget messaging helpers.
 - `lib/pigeon/`: Flutter/native message DTOs and generated bridge code.
-- `android/`, `ios/`, `macos/`, `linux/`, `windows/`: platform projects.
+- `android/`: the supported platform project used for APK builds. `ios/`, `macos/`, `linux/`, `windows/`: unsupported upstream platform projects retained in the repository.
 - `assets/`: app assets, including logo.
 
 ## Core Runtime Flow
@@ -72,8 +76,11 @@ There is no obvious dedicated test directory in the current tree, so use `flutte
 - Async refresh: when the `asyncRefresh` option is on and callers pass `onPartialUpdate` to `Scholar.refresh()`, each completed top-level fetch is merged into memory immediately (semesters/special dates only after all their source fetches succeed, practice scores only at the end); the final full merge, persistence, and error reporting still run exactly as in sync mode. Background refresh never passes the callback and stays synchronous.
 - `Option` stores reactive user settings. `OptionController` writes changes back to Hive and sometimes mirrors flags into secure storage for background tasks.
 - `TaskController` owns task status transitions, fixed schedule rollover, sorting, and task persistence.
+- Task status checks use one-shot boundary timers and resume checks. Flow publishes progress-only notifications through `TaskUpdates.refreshProgress()`; task/flow controllers skip full checks for those notifications. User edits must use a normal task-list refresh or the task controller methods.
+- `ScholarController` caches sorted homework and derives all time-window lists together. In-place homework/course changes must refresh the shared `scholar` Rx to invalidate these caches; deadline/window boundaries and app resume update the shared homework clock automatically. Minute-only update labels use one-shot timers rather than one-second polling.
 - `FlowController` owns generated work blocks, live progress accrual, synchronization back to tasks, persistence throttling, and iOS widget/live activity transfer.
 - `CalendarController` combines `Scholar.periods` with fixed tasks to produce daily calendar events.
+- Calendar daily queries use a bounded cache. Academic changes must notify `scholar`; fixed-schedule edits/rollovers must notify `taskList` to invalidate it. Month markers are immutable snapshots, while `getEventsForDay()` returns independent `Period` copies for details/editing.
 
 When editing controllers, preserve the existing pattern: mutate the shared GetX object, call `.refresh()` when mutating contained objects in place, and persist through `DatabaseHelper` when user-visible state should survive restart.
 
@@ -84,6 +91,7 @@ When editing controllers, preserve the existing pattern: mutate the shared GetX 
 - Do not reorder adapter read/write fields unless you also implement a compatible migration.
 - `DatabaseHelper.init()` registers all adapters before opening boxes. New persisted types must be registered there.
 - Credentials (`username`, `password`) live in `flutter_secure_storage`, not plain Hive fields. Do not store secrets in logs, fixtures, docs, or commits.
+- `DatabaseHelper.setScholar()` only saves academic data. `setActiveCredentials()` writes the active credential keys; `setAccountList()` mirrors the first account into those keys on account commits, and a successful `Scholar.login()` saves credentials explicitly. Ordinary refresh and GPA recalculation must not rewrite credentials.
 - `originalWebPageBox` is a cache for remote pages. Do not treat cached remote content as canonical user data.
 
 ## Network and Auth Rules
@@ -103,6 +111,7 @@ The ZJU scraping layer is brittle by nature. Preserve current behavior unless a 
 
 - UI is mostly Cupertino-styled, with Material icons used where needed.
 - Controllers are created with GetX and often rely on global tags instead of constructor injection.
+- Retain the Worker returned by `ever()` and dispose it in `onClose()`. Resetting a page's selection state must not register another subscription.
 - Prefer following existing page/controller structure in `lib/page/<feature>/`.
 - Avoid moving business logic into widgets when an existing controller already owns that behavior.
 - Keep text and UI behavior consistent with the existing Chinese-first app experience.

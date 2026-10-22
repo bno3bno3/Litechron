@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:litechron/worker/fuse.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 Map<String, dynamic> versionInfo({bool newer = true}) => {
       'version': Fuse.version.join('.'),
@@ -12,6 +13,19 @@ Map<String, dynamic> versionInfo({bool newer = true}) => {
     };
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    PackageInfo.setMockInitialValues(
+      appName: 'Litechron',
+      packageName: 'io.github.bno3bno3.litechron',
+      version: '2.3.4',
+      buildNumber: '42',
+      buildSignature: '',
+    );
+    await Fuse.initializeVersion();
+  });
+
   test('manual check takes over startup result without duplicate prompts',
       () async {
     final response = Completer<Map<String, dynamic>>();

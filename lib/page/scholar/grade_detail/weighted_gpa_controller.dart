@@ -20,6 +20,7 @@ class WeightedGpaController extends GetxController {
   final semesterIndex = 0.obs;
   final showAllSemesters = false.obs;
   late RxList<Semester> semestersWithGrades;
+  Worker? _scholarWorker;
 
   @override
   void onInit() {
@@ -29,7 +30,13 @@ class WeightedGpaController extends GetxController {
         .where((element) => element.grades.isNotEmpty)
         .toList()
         .obs;
-    ever(scholar, (callback) => refreshSemesters());
+    _scholarWorker = ever(scholar, (callback) => refreshSemesters());
+  }
+
+  @override
+  void onClose() {
+    _scholarWorker?.dispose();
+    super.onClose();
   }
 
   void refreshSemesters() {

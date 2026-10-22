@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 import 'package:litechron/http/spider.dart';
@@ -7,9 +8,17 @@ import 'package:litechron/model/todo.dart';
 import 'package:litechron/model/semester.dart';
 import 'package:litechron/model/scholar.dart';
 import 'package:litechron/model/option.dart';
+import 'package:litechron/utils/refresh_time.dart';
 import 'todo/todo_filter.dart';
 
-class ScholarController extends GetxController {
+typedef _TodoBuckets = ({
+  List<Todo> pending,
+  List<Todo> oneDay,
+  List<Todo> oneWeek,
+  DateTime? nextChange,
+});
+
+class ScholarController extends GetxController with WidgetsBindingObserver {
   ScholarController({DateTime Function()? now}) : _now = now ?? DateTime.now {
     _todoNow = _now().obs;
   }
@@ -27,6 +36,15 @@ class ScholarController extends GetxController {
   final RxInt semesterIndex = 0.obs;
 
   Timer? _timer;
+  Worker? _scholarWorker;
+  bool _clockStarted = false;
+  bool _paused = false;
+  Scholar? _todosOwner;
+  List<Todo>? _todosSource;
+  List<Todo>? _sortedTodos;
+  _TodoBuckets? _buckets;
+  Semester? _bucketSemester;
+  DateTime? _bucketNow;
 
   // —— 刷新状态文案 ——
   // 刷新超过约 5 秒（第 _statusFirstShowTick 个周期）才开始展示，
@@ -136,7 +154,14 @@ class ScholarController extends GetxController {
   DateTime get todoNow => _todoNow.value;
 
   List<Todo> get todos {
-    final indexed = _scholar.value.todos.indexed.toList();
+    final owner = _scholar.value;
+    final source = owner.todos;
+    if (_sortedTodos != null &&
+        identical(owner, _todosOwner) &&
+        identical(source, _todosSource)) {
+      return _sortedTodos!;
+    }
+    final indexed = source.indexed.toList();
     indexed.sort((a, b) {
       final aEnd = a.$2.endTime;
       final bEnd = b.$2.endTime;
@@ -146,49 +171,106 @@ class ScholarController extends GetxController {
       // List.sort 本身不稳定，用原始下标保留相同时间（含无日期）的顺序。
       return order == 0 ? a.$1.compareTo(b.$1) : order;
     });
-    return indexed.map((entry) => entry.$2).toList();
+    _todosOwner = owner;
+    _todosSource = source;
+    _sortedTodos = List<Todo>.unmodifiable(indexed.map((entry) => entry.$2));
+    _buckets = null;
+    return _sortedTodos!;
   }
 
-  // 获取当前学期尚未截止（或没有截止日期）的作业。
-  List<Todo> get currentSemesterPendingTodos {
+  Semester? get _currentSemester =>
+      scholar.semesters.isEmpty ? null : scholar.thisSemester;
+
+  _TodoBuckets get _todoBuckets {
+    final sorted = todos;
     final now = todoNow;
-    final thisSemester = _scholar.value.thisSemester;
-    final currentSemesterCourseNames =
-        thisSemester.courses.values.map((course) => course.name).toSet();
+    final semester = _currentSemester;
+    if (_buckets != null &&
+        identical(semester, _bucketSemester) &&
+        now == _bucketNow) {
+      return _buckets!;
+    }
+    final courseNames =
+        semester?.courses.values.map((course) => course.name).toSet() ?? {};
+    final pending = <Todo>[];
+    final oneDay = <Todo>[];
+    final oneWeek = <Todo>[];
+    final dayEnd = now.add(const Duration(days: 1));
+    final weekEnd = now.add(const Duration(days: 7));
+    DateTime? next;
+    void consider(DateTime boundary) {
+      if (boundary.isAfter(now) && (next == null || boundary.isBefore(next!))) {
+        next = boundary;
+      }
+    }
 
-    return todos.where((todo) {
-      // 检查作业是否属于当前学期的课程
-      final isCurrentSemester =
-          currentSemesterCourseNames.contains(todo.course);
-      // 接口没有完成状态字段，这里仅判断截止时间。
-      final isPending = todo.endTime == null || !todo.endTime!.isBefore(now);
-      return isCurrentSemester && isPending;
-    }).toList();
-  }
-
-  List<Todo> todosFor(TodoFilter filter) {
-    final window = filter.window;
-    if (window == null) return todos;
-    final end = todoNow.add(window);
-    return currentSemesterPendingTodos.where((todo) {
+    for (final todo in sorted) {
       final deadline = todo.endTime;
-      return deadline != null && !deadline.isAfter(end);
-    }).toList();
+      if (deadline != null) {
+        // 总计页也需要在截止后更新“已截止”标记，保留截止此刻的包含关系。
+        consider(deadline.add(const Duration(microseconds: 1)));
+      }
+      if (!courseNames.contains(todo.course) ||
+          (deadline != null && deadline.isBefore(now))) {
+        continue;
+      }
+      pending.add(todo);
+      if (deadline == null) continue;
+      if (!deadline.isAfter(dayEnd)) oneDay.add(todo);
+      if (!deadline.isAfter(weekEnd)) oneWeek.add(todo);
+      consider(deadline.subtract(const Duration(days: 1)));
+      consider(deadline.subtract(const Duration(days: 7)));
+    }
+    _bucketSemester = semester;
+    _bucketNow = now;
+    return _buckets = (
+      pending: List<Todo>.unmodifiable(pending),
+      oneDay: List<Todo>.unmodifiable(oneDay),
+      oneWeek: List<Todo>.unmodifiable(oneWeek),
+      nextChange: next,
+    );
   }
+
+  List<Todo> get currentSemesterPendingTodos => _todoBuckets.pending;
+
+  List<Todo> todosFor(TodoFilter filter) => switch (filter) {
+        TodoFilter.all => todos,
+        TodoFilter.oneDay => _todoBuckets.oneDay,
+        TodoFilter.oneWeek => _todoBuckets.oneWeek,
+      };
 
   List<Todo> get todosInOneDay => todosFor(TodoFilter.oneDay);
 
   List<Todo> get todosInOneWeek => todosFor(TodoFilter.oneWeek);
 
-  void _updateDurations() {
+  void _updateDurations({bool forceTodos = false}) {
     final now = _now();
-    _todoNow.value = now;
-    _durationToLastUpdateGrade.value =
-        now.difference(_scholar.value.lastUpdateTimeGrade);
-    _durationToLastUpdateCourse.value =
-        now.difference(_scholar.value.lastUpdateTimeCourse);
-    _durationToLastUpdateHomework.value =
-        now.difference(_scholar.value.lastUpdateTimeHomework);
+    final nextTodoChange = _buckets?.nextChange;
+    if (forceTodos ||
+        _buckets == null ||
+        now.isBefore(todoNow) ||
+        !identical(_bucketSemester, _currentSemester) ||
+        (nextTodoChange != null && !now.isBefore(nextTodoChange))) {
+      _buckets = null;
+      _todoNow.value = now;
+    }
+    _durationToLastUpdateGrade.value = Duration(
+        minutes: now.difference(scholar.lastUpdateTimeGrade).inMinutes);
+    _durationToLastUpdateCourse.value = Duration(
+        minutes: now.difference(scholar.lastUpdateTimeCourse).inMinutes);
+    _durationToLastUpdateHomework.value = Duration(
+        minutes: now.difference(scholar.lastUpdateTimeHomework).inMinutes);
+
+    _timer?.cancel();
+    if (!_clockStarted || _paused || isClosed) return;
+    final boundaries = [
+      nextMinuteChange(scholar.lastUpdateTimeGrade, now),
+      nextMinuteChange(scholar.lastUpdateTimeCourse, now),
+      nextMinuteChange(scholar.lastUpdateTimeHomework, now),
+      if (_todoBuckets.nextChange case final boundary?) boundary,
+    ];
+    final next = boundaries.reduce((a, b) => a.isBefore(b) ? a : b);
+    _timer = Timer(next.difference(now), _updateDurations);
   }
 
   Future<List<String?>> fetchData() async {
@@ -293,19 +375,44 @@ class ScholarController extends GetxController {
   }
 
   @override
-  void onReady() {
-    super.onReady();
-    resetSemesterIndex();
-    _updateDurations();
-
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _updateDurations();
+  void onInit() {
+    super.onInit();
+    WidgetsBinding.instance.addObserver(this);
+    _scholarWorker = ever(_scholar, (_) {
+      _sortedTodos = null;
+      _buckets = null;
+      _updateDurations(forceTodos: true);
     });
   }
 
   @override
+  void onReady() {
+    super.onReady();
+    resetSemesterIndex();
+    _clockStarted = true;
+    _updateDurations(forceTodos: true);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _paused = false;
+      _updateDurations(forceTodos: true);
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      _paused = true;
+      _timer?.cancel();
+    }
+  }
+
+  @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _clockStarted = false;
+    _paused = true;
     _timer?.cancel();
+    _scholarWorker?.dispose();
     _statusTimer?.cancel();
     super.onClose();
   }

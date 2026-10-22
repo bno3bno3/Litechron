@@ -12,14 +12,15 @@ Litechron 通过 GitHub Releases 分发 Android APK。App 每天启动时读取�
 
 ## 每次发版
 
-1. **改版本号**，两处必须一致，`flutter test` 会校验：
+1. **改版本号**，只需修改 `pubspec.yaml`：
 
-   ```zsh
-   pubspec.yaml            version: 1.0.1+2
-   lib/worker/fuse.dart    version = [1, 0, 1];  build = 2;
+   ```yaml
+   version: 1.0.1+2
    ```
 
-   加号后面的构建号必须严格递增，否则 Android 不认为是升级。
+   App 内版本显示和更新检查会自动读取安装包版本，无需再修改 `lib/worker/fuse.dart`。
+   加号后面的构建号每次发布都应递增。仅本地测试时也可只增加构建号，
+   例如从 `1.0.9+10` 改成 `1.0.9+11`，不更新 `remote/version.json`。
 
 2. **构建**：
 
@@ -33,9 +34,9 @@ Litechron 通过 GitHub Releases 分发 Android APK。App 每天启动时读取�
 3. **提交、打标签、推送**：
 
    ```powershell
-   git commit -am "发布 1.0.1"
-   git tag v1.0.1
-   git push origin main v1.0.1
+   git commit -m "发布 1.0.x"
+   git tag -a v1.0.x -m "v1.0.x"
+   git push origin main v1.0.x
    ```
 
 4. **GitHub Release**：在仓库 Releases 页新建 Release，选择标签 `v1.0.1`，上传 APK，发布。

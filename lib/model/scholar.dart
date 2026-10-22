@@ -161,10 +161,17 @@ class Scholar {
       return ["未登录"];
     }
     _spider = _spiderFactory(username!, password!);
-    var loginErrorMessage = await RefreshLock.withAcademic(() => _spider!.login());
+    var loginErrorMessage =
+        await RefreshLock.withAcademic(() => _spider!.login());
     if (loginErrorMessage.every((e) => e == null)) {
       isLogan = true;
-      _db?.setScholar(this);
+      final db = _db;
+      if (db != null) {
+        await Future.wait([
+          db.setScholar(this),
+          db.setActiveCredentials(username, password),
+        ]);
+      }
     }
     return loginErrorMessage;
   }
@@ -372,25 +379,7 @@ class Scholar {
   // 实践学分成功与否要等全部抓完才能判定，中间态一律保持不变。
   void _applyFetchResult(EverythingTuple value, {bool partial = false}) {
     var tempSemester = value.item3;
-    var tempGrades = value.item4.fold(<String, List<Grade>>{}, (p, e) {
-      // 体育课
-      var matchClass = RegExp(r'(\(.*\)-(.*?))-.*').firstMatch(e.id);
-      var key = matchClass?.group(2) ?? e.id.substring(14, 22);
-      if (key.startsWith('PPAE') || key.startsWith('401')) {
-        key = matchClass?.group(1) ?? e.id.substring(0, 22);
-      }
-      var courseIdMappingList =
-          Get.find<OptionController>(tag: 'optionController')
-              .courseIdMappingList;
-      var courseIdMappingMap = {
-        for (var e in courseIdMappingList) e.id1: e.id2
-      };
-      if (courseIdMappingMap.containsKey(key)) {
-        key = courseIdMappingMap[key]!;
-      }
-      p.putIfAbsent(key, () => <Grade>[]).add(e);
-      return p;
-    });
+    var tempGrades = _groupGrades(value.item4);
     var tempMajorGpaAndCredit = value.item5;
     var tempSpecialDates = value.item6;
     var tempTodos = value.item7;
@@ -575,30 +564,32 @@ class Scholar {
   }
 
   Future<void> recalculateGpa() async {
-    grades =
-        grades.values.expand((e) => e).fold(<String, List<Grade>>{}, (p, e) {
-      // 体育课
-      var matchClass = RegExp(r'(\(.*\)-(.*?))-.*').firstMatch(e.id);
-      var key = matchClass?.group(2) ?? e.id.substring(14, 22);
-      if (key.startsWith('PPAE') || key.startsWith('401')) {
-        key = matchClass?.group(1) ?? e.id.substring(0, 22);
-      }
-      var courseIdMappingList =
-          Get.find<OptionController>(tag: 'optionController')
-              .courseIdMappingList;
-      var courseIdMappingMap = {
-        for (var e in courseIdMappingList) e.id1: e.id2
-      };
-      if (courseIdMappingMap.containsKey(key)) {
-        key = courseIdMappingMap[key]!;
-      }
-      p.putIfAbsent(key, () => <Grade>[]).add(e);
-      return p;
-    });
-
+    grades = _groupGrades(grades.values.expand((e) => e));
     _computeGpas();
-
     await _db?.setScholar(this);
+  }
+
+  Map<String, List<Grade>> _groupGrades(Iterable<Grade> source) {
+    if (source.isEmpty) return {};
+    final mappings = {
+      for (final mapping in Get.find<OptionController>(tag: 'optionController')
+          .courseIdMappingList)
+        mapping.id1: mapping.id2,
+    };
+    final coursePattern = RegExp(r'(\(.*\)-(.*?))-.*');
+    final grouped = <String, List<Grade>>{};
+    for (final grade in source) {
+      // 体育课
+      final matchClass = coursePattern.firstMatch(grade.id);
+      var key = matchClass?.group(2) ?? grade.id.substring(14, 22);
+      if (key.startsWith('PPAE') || key.startsWith('401')) {
+        key = matchClass?.group(1) ?? grade.id.substring(0, 22);
+      }
+      key = mappings[key] ?? key;
+      // 保留传入的修读顺序：首次成绩与最高成绩的选择由后续 GPA 计算负责。
+      grouped.putIfAbsent(key, () => <Grade>[]).add(grade);
+    }
+    return grouped;
   }
 
   Scholar.fromJson(Map<String, dynamic> json, {SpiderFactory? spiderFactory})

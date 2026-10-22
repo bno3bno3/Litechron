@@ -48,6 +48,8 @@ class UpcomingWidgetSync {
       MethodChannel('io.github.bno3bno3.litechron/upcomingWidget');
   static final openFlow = 0.obs;
   static Timer? _timer;
+  static Worker? _scholarWorker;
+  static Worker? _flowWorker;
   static bool _flowListReady = false;
   static String? _account;
   static String? _signature;
@@ -55,14 +57,29 @@ class UpcomingWidgetSync {
   static Future<void> _pending = Future.value();
 
   static void start() {
-    if (!Platform.isAndroid) return;
-    ever(Get.find<Rx<Scholar>>(tag: 'scholar'), (_) {
+    if (!Platform.isAndroid || _scholarWorker != null) return;
+    _scholarWorker = ever(Get.find<Rx<Scholar>>(tag: 'scholar'), (_) {
       // Wait for the page to merge refreshed academic data before publishing.
       _flowListReady = false;
       schedule();
     });
-    ever(Get.find<RxList<Period>>(tag: 'flowList'), (_) => schedule());
+    _flowWorker =
+        ever(Get.find<RxList<Period>>(tag: 'flowList'), (_) => schedule());
     schedule();
+  }
+
+  static void stop() {
+    _timer?.cancel();
+    _timer = null;
+    _scholarWorker?.dispose();
+    _scholarWorker = null;
+    _flowWorker?.dispose();
+    _flowWorker = null;
+    _flowListReady = false;
+    _account = null;
+    _signature = null;
+    // 已排队的旧页面快照不能在其销毁后继续发布。
+    _generation++;
   }
 
   /// Called after the page has finished preparing its shared list.
