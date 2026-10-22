@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.glance.appwidget.compose
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -97,12 +98,14 @@ class UpcomingWidgetRenderTest {
         val zone = ZoneId.systemDefault()
         val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
         val tomorrow = today.plusDays(1).atTime(10, 0).atZone(zone).toInstant().toEpochMilli()
+        val dayAfterTomorrow = today.plusDays(2).atTime(10, 0).atZone(zone).toInstant().toEpochMilli()
         val far = today.plusDays(80).atTime(10, 0).atZone(zone).toInstant().toEpochMilli()
         val events = buildList {
             if (!futureOnly) listOf("course", "exam", "schedule", "flow").forEachIndexed { index, type ->
                 add(UpcomingItem("$type-$index", type, "示例安排 $index", "示例地点", now - 60_000, now + 3_600_000))
             }
             add(UpcomingItem("tomorrow", "schedule", "明天的日程", "", tomorrow, tomorrow + 3_600_000))
+            add(UpcomingItem("day-after-tomorrow", "schedule", "后天的日程", "", dayAfterTomorrow, dayAfterTomorrow + 3_600_000))
             add(UpcomingItem("far", "flow", "较远日期的规划", "示例地点", far, far + 3_600_000))
         }
         val items = JSONArray()
@@ -145,7 +148,15 @@ class UpcomingWidgetRenderTest {
                     textViews(list.adapter.getView(index, null, list)).map { it.text.toString() }
                 }
                 for (event in events) assertTrue("Schedule missing: $rowLabels", event.title in rowLabels)
-                for (date in dates) assertTrue("Date missing: $rowLabels", dateTitle(date, today) in rowLabels)
+                assertEquals("Tomorrow label missing: $rowLabels", 1, rowLabels.count { it == "明天" })
+                assertEquals("Day-after-tomorrow label missing: $rowLabels", 1, rowLabels.count { it == "后天" })
+                assertEquals("Unexpected today headers: $rowLabels", if (futureOnly) 0 else 1,
+                    rowLabels.count { it == "今天" })
+                assertEquals("Unexpected date headers: $rowLabels", listOf(dateTitle(today.plusDays(80), today)),
+                    rowLabels.filter { " | 星期" in it })
+                val firstRowLabels = textViews(list.adapter.getView(0, null, list)).map { it.text.toString() }
+                assertTrue("Unexpected first row: $firstRowLabels",
+                    (if (futureOnly) "明天" else "今天") in firstRowLabels)
                 assertTrue("Flow type missing: $rowLabels", rowLabels.any { it.endsWith("· 规划任务") })
             }
         }

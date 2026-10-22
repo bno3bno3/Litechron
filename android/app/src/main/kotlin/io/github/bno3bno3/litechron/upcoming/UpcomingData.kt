@@ -59,9 +59,14 @@ data class UpcomingSnapshot(val items: List<UpcomingItem>) {
     }
 }
 
-internal fun dateTitle(date: LocalDate, today: LocalDate): String = date.format(
-    DateTimeFormatter.ofPattern(if (date.year == today.year) "M月d日 | EEEE" else "yyyy年M月d日 | EEEE",
+internal fun dateTitle(date: LocalDate, today: LocalDate): String = when (date) {
+    today -> "今天"
+    today.plusDays(1) -> "明天"
+    today.plusDays(2) -> "后天"
+    else -> date.format(DateTimeFormatter.ofPattern(
+        if (date.year == today.year) "M月d日 | EEEE" else "yyyy年M月d日 | EEEE",
         Locale.SIMPLIFIED_CHINESE))
+}
 
 internal fun timeRange(item: UpcomingItem, now: Long, zone: ZoneId = ZoneId.systemDefault()): String {
     val start = Instant.ofEpochMilli(item.start).atZone(zone)

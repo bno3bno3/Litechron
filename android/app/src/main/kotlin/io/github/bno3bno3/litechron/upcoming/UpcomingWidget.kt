@@ -129,7 +129,7 @@ class UpcomingWidget : GlanceAppWidget() {
                                 items(rows, itemId = { stableId(it.id) }) { row ->
                                     when (row) {
                                         is UpcomingRow.DateHeader -> Text(dateTitle(row.date, today),
-                                            GlanceModifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
+                                            GlanceModifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
                                             style = TextStyle(color = GlanceTheme.colors.onBackground,
                                                 fontSize = 14.sp, fontWeight = FontWeight.Medium), maxLines = 1)
                                         is UpcomingRow.Event -> Card(row.item, now, actionStartActivity(intent),

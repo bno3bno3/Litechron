@@ -33,36 +33,76 @@ class UpcomingDataTest {
         assertTrue(snapshot.remaining(far + 3_600_000).isEmpty())
     }
 
-    @Test fun rowsIncludeTheFirstDateSkipEmptyDaysAndKeepStableDistinctIds() {
+    @Test fun rowsIncludeTodaySkipEmptyDaysAndKeepStableDistinctIds() {
         val snapshot = UpcomingSnapshot(listOf(
             item("a", "course", time(21, 10), time(21, 12)),
             item("b", "flow", time(21, 13), time(21, 14)),
             item("c", "schedule", time(22, 8), time(22, 9)),
             item("d", "exam", time(24, 8), time(24, 9))))
         val rows = snapshot.rows(time(21, 11), zone)
-        assertEquals(listOf(21, 22, 24), rows.filterIsInstance<UpcomingRow.DateHeader>().map { it.date.dayOfMonth })
+        assertEquals(listOf("date:2026-10-21", "item:a", "item:b", "date:2026-10-22", "item:c", "date:2026-10-24", "item:d"),
+            rows.map { it.id })
         assertEquals(listOf("a", "b", "c", "d"), rows.filterIsInstance<UpcomingRow.Event>().map { it.item.id })
         assertEquals(listOf(true, false, false, false), rows.filterIsInstance<UpcomingRow.Event>().map { it.hasNextInDay })
         assertEquals(rows.size, rows.map { it.id }.toSet().size)
         assertEquals(rows.size, rows.map { stableId(it.id) }.toSet().size)
+        assertEquals(rows.drop(3), snapshot.rows(time(22, 0), zone))
         assertEquals(rows.drop(3), snapshot.rows(time(21, 15), zone))
-        assertEquals(snapshot.rows(time(21, 15), zone), snapshot.rows(time(22, 0), zone))
+    }
+
+    @Test fun todayOnlyListContainsOneTodayHeaderBeforeItsEvents() {
+        val snapshot = UpcomingSnapshot(listOf(
+            item("a", "course", time(21, 10), time(21, 12)),
+            item("b", "flow", time(21, 13), time(21, 14))))
+        val rows = snapshot.rows(time(21, 11), zone)
+        assertEquals(listOf("date:2026-10-21", "item:a", "item:b"), rows.map { it.id })
+        assertEquals("今天", dateTitle((rows.first() as UpcomingRow.DateHeader).date, LocalDate.of(2026, 10, 21)))
+        assertEquals(listOf(true, false), rows.filterIsInstance<UpcomingRow.Event>().map { it.hasNextInDay })
+    }
+
+    @Test fun futureOnlyListStartsWithTheFirstAvailableDate() {
+        val snapshot = UpcomingSnapshot(listOf(item("later", "schedule", time(23, 10), time(23, 12))))
+        val rows = snapshot.rows(time(21, 11), zone)
+        assertEquals(listOf("date:2026-10-23", "item:later"), rows.map { it.id })
+        assertEquals("后天", dateTitle((rows.first() as UpcomingRow.DateHeader).date, LocalDate.of(2026, 10, 21)))
+    }
+
+    @Test fun midnightRelabelsTomorrowAsTodayAndTheFollowingDayAsTomorrow() {
+        val snapshot = UpcomingSnapshot(listOf(
+            item("tomorrow", "course", time(22, 10), time(22, 12)),
+            item("after", "schedule", time(23, 10), time(23, 12))))
+        val before = snapshot.rows(time(21, 23), zone)
+        val after = snapshot.rows(time(22, 0), zone)
+        assertEquals(listOf("明天", "后天"), before.filterIsInstance<UpcomingRow.DateHeader>()
+            .map { dateTitle(it.date, LocalDate.of(2026, 10, 21)) })
+        assertEquals(before, after)
+        assertEquals(listOf("今天", "明天"), after.filterIsInstance<UpcomingRow.DateHeader>()
+            .map { dateTitle(it.date, LocalDate.of(2026, 10, 22)) })
     }
 
     @Test fun overnightIsShownOnceUnderTodayUntilItsEnd() {
         val snapshot = UpcomingSnapshot(listOf(item("overnight", "schedule", time(21, 23), time(22, 2))))
         val before = snapshot.rows(time(21, 23), zone)
         val after = snapshot.rows(time(22, 0), zone)
-        assertEquals(LocalDate.of(2026, 10, 21), (before.first() as UpcomingRow.DateHeader).date)
-        assertEquals(LocalDate.of(2026, 10, 22), (after.first() as UpcomingRow.DateHeader).date)
-        assertEquals(before.last().id, after.last().id)
-        assertEquals(1, after.filterIsInstance<UpcomingRow.Event>().size)
+        assertEquals(listOf("date:2026-10-21", "item:overnight"), before.map { it.id })
+        assertEquals(listOf("date:2026-10-22", "item:overnight"), after.map { it.id })
+        assertEquals("今天", dateTitle((after.first() as UpcomingRow.DateHeader).date, LocalDate.of(2026, 10, 22)))
+        assertEquals(before.last(), after.last())
         assertTrue(snapshot.rows(time(22, 2), zone).isEmpty())
     }
 
-    @Test fun headersUseChineseWeekdaysAndShowTheYearWhenNeeded() {
+    @Test fun nearHeadersUseRelativeLabelsAcrossMonthAndYearBoundaries() {
+        for (today in listOf(LocalDate.of(2026, 10, 21), LocalDate.of(2026, 10, 30),
+            LocalDate.of(2026, 10, 31), LocalDate.of(2026, 12, 30), LocalDate.of(2026, 12, 31))) {
+            assertEquals("今天", dateTitle(today, today))
+            assertEquals("明天", dateTitle(today.plusDays(1), today))
+            assertEquals("后天", dateTitle(today.plusDays(2), today))
+        }
+    }
+
+    @Test fun distantHeadersUseChineseWeekdaysAndShowTheYearWhenNeeded() {
         val today = LocalDate.of(2026, 10, 21)
-        assertEquals("10月22日 | 星期四", dateTitle(today.plusDays(1), today))
+        assertEquals("10月24日 | 星期六", dateTitle(today.plusDays(3), today))
         assertEquals("2027年1月1日 | 星期五", dateTitle(LocalDate.of(2027, 1, 1), today))
     }
 
