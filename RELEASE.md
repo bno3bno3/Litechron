@@ -34,9 +34,9 @@ Litechron 通过 GitHub Releases 分发 Android APK。App 每天启动时读取�
 3. **提交、打标签、推送**：
 
    ```powershell
-   git commit -m "发布 1.0.x"
-   git tag -a v1.0.x -m "v1.0.x"
-   git push origin main v1.0.x
+   git commit -m "发布 x.x.x"
+   git tag -a vx.x.x -m "vx.x.x"
+   git push origin main vx.x.x
    ```
 
 4. **GitHub Release**：在仓库 Releases 页新建 Release，选择标签 `v1.0.1`，上传 APK，发布。
