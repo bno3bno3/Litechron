@@ -154,7 +154,7 @@ If Pigeon interfaces change, regenerate the corresponding Dart/native outputs an
 - Do not reintroduce upstream endpoints: `api.celechron.top` (update check), `api.github.com/repos/Celechron/...` (contributors), or `celechron.top` links. Update check reads `remote/version.json` from this repository via jsDelivr (`Fuse.checkUpdateUrl`).
 - Semester calendar config still comes from `calendar.celechron.top` with fallbacks to Hive cache and bundled `assets/calendar/<semester>.json`. Add a new bundled file each semester.
 - The About page must keep the line stating the project is derived from Celechron under GPLv3. The ICP record number of the upstream project must not be re-added.
-- Logo is `assets/logo.svg` (rendered with `flutter_svg`), based on the approved L时光 V2 design: a folded blue-purple L, three short ticks, and a pale background. Preserve its smooth gradients and subtle fold highlight. Launcher icons are generated from `assets/icon/` via `flutter_launcher_icons` for Android only; adaptive icons separate the foreground from the background so system masks define the outer shape. Reviewed design versions are kept in `assets/icon/design/`.
+- Logo is `assets/logo.svg` (rendered with `flutter_svg`), based on the approved L时光 V5 design: a folded blue-purple L, three short ticks, and a pale background. Preserve its smooth gradients, subtly darkened outer edges, and bright fold junction. Launcher icons are generated from `assets/icon/` via `flutter_launcher_icons` for Android only; adaptive icons separate the foreground from the background so system masks define the outer shape. Reviewed design versions are kept in `assets/icon/design/`.
 
 ## Security and Privacy
 
