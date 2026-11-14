@@ -897,3 +897,7 @@ DerivedData/
 rubbish.md
 # Claude 中间文件
 /temp/
+
+# Keep launcher source assets; the macOS Icon rule also matches this directory on Windows.
+!/assets/icon/
+!/assets/icon/**
